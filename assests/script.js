@@ -55,7 +55,7 @@ const products = [
     name: "Wireless Earbuds Pro",
     price: 129.99,
     category: "audio",
-    image: "/assests/images/pods.jpeg",
+    image: "/assests/images/Pods.jpeg",
     rating: 4.6,
     reviews: 467,
     description:
