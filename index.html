@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Neon Tech – Demo Store</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assests/style.css" />
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/128/1162/1162456.png" />
+</head>
+<body>
+  <div class="app">
+    <div class="neon-blob blob1"></div>
+    <div class="neon-blob blob2"></div>
+    <div class="neon-blob blob3"></div>
+
+    <header>
+      <div class="header-inner">
+        <div class="brand">
+          <div class="logo">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 12h18" stroke="#fff" stroke-opacity="0.5" stroke-width="2"/>
+              <path d="M6 7h12v10H6z" fill="#fff" fill-opacity="0.2"/>
+            </svg>
+          </div>
+          <div>
+            <h1>NEON TECH</h1>
+            <div class="tiny muted">Premium Tech Store</div>
+          </div>
+        </div>
+
+        <div class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <input id="searchInput" type="text" placeholder="Search products..." />
+        </div>
+
+        <div class="actions">
+          <button id="cartBtn" class="icon-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M6 6h15l-1.5 9h-12z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="10" cy="20" r="1.5" fill="currentColor"/>
+              <circle cx="18" cy="20" r="1.5" fill="currentColor"/>
+            </svg>
+            <div id="cartBadge" class="badge" style="display:none">0</div>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="controls">
+        <div id="categoryList" class="category-list"></div>
+        <select id="sortSelect" class="sort-select">
+          <option value="featured">Featured</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="rating">Highest Rated</option>
+        </select>
+      </div>
+
+      <section id="grid" class="grid"></section>
+    </main>
+
+    <div id="cartRoot"></div>
+    <div id="modalRoot"></div>
+  </div>
+</body>
+<script src="./assests/script.js"></script>
+</html>
