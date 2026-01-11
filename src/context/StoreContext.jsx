@@ -630,7 +630,6 @@ export function StoreProvider({ children }) {
       const response = await productAPI.create(product);
       const newProduct = sanitizeProducts([response.data])[0];
       setProducts(prev => [...prev, newProduct]);
-      addToast('Product added successfully', 'success');
     } catch (error) {
       addToast('Failed to add product', 'error');
     }
@@ -653,7 +652,6 @@ export function StoreProvider({ children }) {
       setProducts(prev => prev.map(p => 
         (p._id || p.id) === productId ? updatedProduct : p
       ));
-      addToast('Product updated', 'success');
     } catch (error) {
       addToast('Failed to update product', 'error');
     }
