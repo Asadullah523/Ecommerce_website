@@ -254,19 +254,19 @@ export function StoreProvider({ children }) {
           loggedIn ? wishlistAPI.get(userId) : Promise.resolve({ data: { products: [] } })
         ]);
         
-        if (productsRes.data.length > 0) {
+        if (productsRes.data) {
           setProducts(sanitizeProducts(productsRes.data));
         }
         
-        if (ordersRes.data.length > 0) {
+        if (ordersRes.data) {
           setOrders(ordersRes.data);
         }
 
-        if (categoriesRes.data.length > 0) {
+        if (categoriesRes.data) {
           setCategories(categoriesRes.data);
         }
 
-        if (couponsRes.data.length > 0) {
+        if (couponsRes.data) {
           setCoupons(couponsRes.data);
         }
 
@@ -274,11 +274,11 @@ export function StoreProvider({ children }) {
           setRevenueGoal(settingsRes.data.revenueGoal);
         }
 
-        if (usersRes.data.length > 0) {
+        if (usersRes.data) {
           setUsers(usersRes.data);
         }
 
-        if (cartRes.data && cartRes.data.items && cartRes.data.items.length > 0) {
+        if (cartRes.data && cartRes.data.items) {
           setCart(cartRes.data.items);
         }
 
