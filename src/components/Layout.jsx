@@ -3,6 +3,10 @@ import Navbar from './Navbar';
 import { useStore } from '../context/StoreContext';
 import { ToastContainer } from './ui/Toast';
 
+/**
+ * Main Layout component that wraps all pages
+ * Provides consistent navigation, footer, and toast notification container.
+ */
 export default function Layout() {
   const { toasts, removeToast } = useStore();
   return (

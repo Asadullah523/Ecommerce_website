@@ -6,6 +6,10 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Star, ShoppingCart, ChevronLeft, Heart, CheckCircle2, User, ShieldAlert } from 'lucide-react';
 
+/**
+ * Product Detail Page Component
+ * Renders comprehensive product information, image gallery, reviews, and related items.
+ */
 export default function ProductDetail() {
   const { productId } = useParams();
   const navigate = useNavigate();

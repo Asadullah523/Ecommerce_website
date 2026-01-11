@@ -1,3 +1,7 @@
+/**
+ * Email Service
+ * Handles sending order confirmations and status updates via EmailJS with premium HTML receipts.
+ */
 import emailjs from '@emailjs/browser';
 
 // ==============================================================================
@@ -30,6 +34,9 @@ const CURRENCY_SYMBOLS = {
   AED: 'AED '
 };
 
+/**
+ * Formats currency values based on the order's local state
+ */
 const formatCurrency = (amount, currency, rate) => {
   // If no currency/rate provided (legacy orders), default to USD behavior
   const cur = currency || 'USD';

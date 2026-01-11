@@ -4,6 +4,9 @@ import { Target, Zap, Waves } from 'lucide-react';
 
 import { useStore } from '../context/StoreContext';
 
+/**
+ * Component for displaying key performance indicators (KPIs) in the dashboard
+ */
 export default function PerformanceMetrics({ metrics }) {
   const { averageOrderValue = 0, conversionRate = 0, goalProgress = 0, revenueGoal = 5000 } = metrics;
   const { formatPrice, currency } = useStore();

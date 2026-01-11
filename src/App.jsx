@@ -16,7 +16,7 @@ const Wishlist = lazy(() => import('./pages/Wishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
 const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 
-// Placeholder components for now
+// Main Application Component
 function App() {
   return (
     <Suspense fallback={

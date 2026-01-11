@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * Custom SVG-based line chart component for sales data visualization
+ * Calculates path points and gradients for a premium dashboard look.
+ */
 export default function SalesChart({ 
   data = [0, 0, 0, 0, 0, 0, 0], 
   labels = [] 

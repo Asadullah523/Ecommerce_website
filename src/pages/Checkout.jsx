@@ -7,6 +7,10 @@ import { Input } from '../components/ui/Input';
 import { ShoppingCart, CheckCircle2, Package, ArrowRight, User, Mail, MapPin, CreditCard, ShieldCheck, Clock, Store, Tag, X, Lock, ShoppingBag } from 'lucide-react';
 import { sendOrderConfirmation } from '../services/emailService';
 
+/**
+ * Checkout Component
+ * Handles the order placement process, payment selection, and confirmation.
+ */
 export default function Checkout() {
   const { cart, placeOrder, applyCoupon, user, formatPrice, currency, EXCHANGE_RATES } = useStore();
   const navigate = useNavigate();
@@ -32,6 +36,7 @@ export default function Checkout() {
     setCouponLoading(true);
     setCouponError('');
 
+    // Validation delay for coupon verification
     setTimeout(() => {
       const result = applyCoupon(couponCode, grandTotal);
       
@@ -78,7 +83,7 @@ export default function Checkout() {
       exchangeRate: EXCHANGE_RATES[currency] || 1,
     };
 
-    // Simulate API call with extensive safety checks
+    // Process order with safety checks and email notifications
     setTimeout(async () => {
       try {
         const order = placeOrder(orderData);

@@ -1,13 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { sendStatusNotification } from '../services/emailService';
+import { productAPI, authAPI, orderAPI, categoryAPI, couponAPI, settingsAPI, cartAPI, wishlistAPI } from '../services/api';
 
-// Constants
+// Currency exchange rates (USD as base currency)
 const EXCHANGE_RATES = {
   USD: 1,
-  PKR: 278.50, // Current approx rate
+  PKR: 278.50,
   AED: 3.67
 };
 
+// Currency display symbols
 const CURRENCY_SYMBOLS = {
   USD: '$',
   PKR: 'Rs ',
@@ -16,6 +18,7 @@ const CURRENCY_SYMBOLS = {
 
 const StoreContext = createContext();
 
+// Default product catalog for demo purposes
 const DEFAULT_PRODUCTS = [
   {
     id: 1,
@@ -77,6 +80,7 @@ const DEFAULT_PRODUCTS = [
   }
 ];
 
+// Default product categories
 const DEFAULT_CATEGORIES = [
   { id: 1, name: 'Gaming', slug: 'gaming' },
   { id: 2, name: 'Audio', slug: 'audio' },
@@ -84,18 +88,20 @@ const DEFAULT_CATEGORIES = [
   { id: 4, name: 'Accessories', slug: 'accessories' },
 ];
 
+// Default discount coupons
 const DEFAULT_COUPONS = [
   { id: 1, code: 'WELCOME10', discount: 10, type: 'percentage', active: true },
   { id: 2, code: 'SAVE20', discount: 20, type: 'fixed', active: true },
 ];
 
+// Sanitize product data for consistency and backward compatibility
 const sanitizeProducts = (prods) => {
   if (!Array.isArray(prods)) return DEFAULT_PRODUCTS;
-  // If array is empty, keep it empty (user deleted all products)
+  // Preserve empty arrays (intentional product deletion)
   if (prods.length === 0) return [];
   
   return prods.map(product => {
-    const { category, ...p } = product; // Remove legacy category string
+    const { category, ...p } = product; // Remove legacy single category field
     return {
       ...p,
       id: p.id || Date.now() + Math.random(),
@@ -173,8 +179,11 @@ const DEFAULT_ORDERS = [
   }
 ];
 
+/**
+ * Store Provider component to manage global state across the application
+ */
 export function StoreProvider({ children }) {
-  // --- State ---
+  // Initialization of state variables with data from LocalStorage for persistence
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('neon_user');
     return saved ? JSON.parse(saved) : { role: 'guest', name: 'Guest' };
@@ -224,6 +233,68 @@ export function StoreProvider({ children }) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch initial data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const loggedIn = user && user.role !== 'guest';
+        const userId = user._id || user.id;
+
+        const [productsRes, ordersRes, categoriesRes, couponsRes, settingsRes, usersRes, cartRes, wishlistRes] = await Promise.all([
+          productAPI.getAll(),
+          user.role === 'admin' ? orderAPI.getAll() : Promise.resolve({ data: [] }),
+          categoryAPI.getAll(),
+          couponAPI.getAll(),
+          settingsAPI.getAll(),
+          user.role === 'admin' ? authAPI.getAllUsers() : Promise.resolve({ data: [] }),
+          loggedIn ? cartAPI.get(userId) : Promise.resolve({ data: { items: [] } }),
+          loggedIn ? wishlistAPI.get(userId) : Promise.resolve({ data: { products: [] } })
+        ]);
+        
+        if (productsRes.data.length > 0) {
+          setProducts(sanitizeProducts(productsRes.data));
+        }
+        
+        if (ordersRes.data.length > 0) {
+          setOrders(ordersRes.data);
+        }
+
+        if (categoriesRes.data.length > 0) {
+          setCategories(categoriesRes.data);
+        }
+
+        if (couponsRes.data.length > 0) {
+          setCoupons(couponsRes.data);
+        }
+
+        if (settingsRes.data && settingsRes.data.revenueGoal) {
+          setRevenueGoal(settingsRes.data.revenueGoal);
+        }
+
+        if (usersRes.data.length > 0) {
+          setUsers(usersRes.data);
+        }
+
+        if (cartRes.data && cartRes.data.items && cartRes.data.items.length > 0) {
+          setCart(cartRes.data.items);
+        }
+
+        if (wishlistRes.data && wishlistRes.data.products) {
+          setWishlist(wishlistRes.data.products);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        addToast('Failed to connect to backend. Using local data.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user.role]);
 
   const addToast = (message, type = 'info') => {
     const id = Date.now();
@@ -234,10 +305,20 @@ export function StoreProvider({ children }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // --- Data Integrity Persistence ---
+  // Persistent storage Synchronization
+  // Ensures state changes are reflected in LocalStorage for data integrity after page reloads
+  // Revenue Goal synchronization with backend
   useEffect(() => {
-    localStorage.setItem('neon_revenue_goal', revenueGoal.toString());
-  }, [revenueGoal]);
+    const updateGoal = async () => {
+      try {
+        await settingsAPI.update('revenueGoal', revenueGoal);
+        localStorage.setItem('neon_revenue_goal', revenueGoal.toString());
+      } catch (error) {
+        console.error('Failed to update revenue goal on server:', error);
+      }
+    };
+    if (!loading) updateGoal();
+  }, [revenueGoal, loading]);
 
   useEffect(() => {
     localStorage.setItem('neon_currency', currency);
@@ -264,30 +345,48 @@ export function StoreProvider({ children }) {
   }, [products]);
 
   useEffect(() => {
+    localStorage.setItem('neon_wishlist', JSON.stringify(Array.isArray(wishlist) ? wishlist : []));
+    const syncWishlist = async () => {
+      if (user && user.role !== 'guest' && !loading) {
+        try {
+          await wishlistAPI.update({
+            userId: user._id || user.id,
+            products: wishlist.map(p => p._id || p.id)
+          });
+        } catch (error) {
+          console.error('Wishlist sync failed:', error);
+        }
+      }
+    };
+    syncWishlist();
+  }, [wishlist, user, loading]);
+
+  useEffect(() => {
     try {
       localStorage.setItem('neon_cart', JSON.stringify(cart));
+      const syncCart = async () => {
+        if (user && user.role !== 'guest' && !loading) {
+          try {
+            await cartAPI.update({
+              userId: user._id || user.id,
+              items: cart
+            });
+          } catch (error) {
+            console.error('Cart sync failed:', error);
+          }
+        }
+      };
+      syncCart();
     } catch (error) {
       console.error('Failed to save cart to localStorage:', error);
     }
-  }, [cart]);
+  }, [cart, user, loading]);
 
-  useEffect(() => {
-    localStorage.setItem('neon_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('neon_categories', JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem('neon_coupons', JSON.stringify(coupons));
-  }, [coupons]);
-
-  useEffect(() => {
-    localStorage.setItem('neon_wishlist', JSON.stringify(Array.isArray(wishlist) ? wishlist : []));
-  }, [wishlist]);
-
-  // --- Actions ---
+  // Core Business Logic Actions
+  
+  /**
+   * Adds an item to the shopping cart or increases quantity if already present
+   */
   const addToCart = (product) => {
     if (user.role === 'admin') {
       alert("Admin accounts cannot make purchases. Please use a customer account to shop.");
@@ -324,90 +423,159 @@ export function StoreProvider({ children }) {
     }).filter(item => item.quantity > 0));
   };
 
+  /**
+   * Clears all items from the current shopping cart
+   */
   const clearCart = () => setCart([]);
 
-  // Order Management
-  const placeOrder = (order) => {
-    const newOrder = {
-      ...order,
-      id: `ORD-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-      customerName: order.customer?.name || order.customerName || 'Guest'
-    };
-    setOrders(prev => [...prev, newOrder]);
-    clearCart();
-    return newOrder;
-  };
-
-  const updateOrderStatus = (orderId, newStatus) => {
-    // 1. Find the order first to check conditions
-    const orderToUpdate = orders.find(o => o.id === orderId);
-    
-    // 2. Trigger side effects (Email) if status is actually changing
-    if (orderToUpdate && orderToUpdate.status !== newStatus && newStatus !== 'pending') {
-      sendStatusNotification({ ...orderToUpdate, status: newStatus }, newStatus);
+  // Order Processing and Management Functions
+  
+  /**
+   * Finalizes an order and clears the cart
+   */
+  const placeOrder = async (order) => {
+    try {
+      const orderData = {
+        ...order,
+        items: cart,
+        total: order.total,
+        customerName: order.customer?.name || order.customerName || 'Guest',
+        user: user._id || null
+      };
+      
+      const response = await orderAPI.create(orderData);
+      const newOrder = response.data;
+      
+      setOrders(prev => [newOrder, ...prev]);
+      clearCart();
+      return newOrder;
+    } catch (error) {
+      console.error('Order placement failed:', error);
+      addToast('Failed to place order. Please try again.', 'error');
+      throw error;
     }
-
-    // 3. Update state purely
-    setOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
   };
 
-  const deleteOrder = (orderId) => {
-    setOrders(prev => prev.filter(o => o.id !== orderId));
-  };
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      // 1. Update on backend
+      const response = await orderAPI.updateStatus(orderId, newStatus);
+      const updatedOrder = response.data;
+      
+      // 2. Trigger side effects (Email) if status is actually changing
+      if (updatedOrder && newStatus !== 'pending') {
+        sendStatusNotification(updatedOrder, newStatus);
+      }
 
-  const deleteCancelledOrders = () => {
-    setOrders(prev => prev.filter(o => !o.status.startsWith('cancelled')));
-  };
-
-  // User Management
-  const registerUser = (userData) => {
-    if (users.some(u => u.email === userData.email)) {
-      return { success: false, error: 'Email already registered' };
+      // 3. Update state purely
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order._id === orderId ? updatedOrder : order
+        )
+      );
+      addToast(`Order status updated to ${newStatus}`, 'success');
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      addToast('Failed to update order status.', 'error');
     }
-    
-    const newUser = {
-      id: `user_${Date.now()}`,
-      ...userData,
-      createdAt: new Date().toISOString(),
-      role: userData.role || 'customer'
-    };
-    setUsers(prev => [...prev, newUser]);
-    return { success: true, user: newUser };
   };
 
-  const deleteUser = (userId) => {
-    if (user && user.id === userId && user.role === 'admin') {
+  /**
+   * Removes an order from history
+   */
+  const deleteOrder = async (orderId) => {
+    try {
+      await orderAPI.delete(orderId);
+      setOrders(prev => prev.filter(o => (o._id || o.id) !== orderId));
+      addToast('Order removed', 'info');
+    } catch (error) {
+      addToast('Failed to remove order', 'error');
+    }
+  };
+
+  /**
+   * Bulk removal of cancelled orders
+   */
+  const deleteCancelledOrders = async () => {
+    try {
+      await orderAPI.clearCancelled();
+      setOrders(prev => prev.filter(o => !o.status.startsWith('cancelled')));
+      addToast('Cancelled orders cleared', 'success');
+    } catch (error) {
+      addToast('Failed to clear cancelled orders', 'error');
+    }
+  };
+
+  // User and Identity Management Logic
+  
+  /**
+   * Registers a new account in the system
+   */
+  const registerUser = async (userData) => {
+    try {
+      const response = await authAPI.register(userData);
+      const newUser = response.data;
+      setUsers(prev => [...prev, newUser]);
+      setUser(newUser);
+      return { success: true, user: newUser };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Registration failed' 
+      };
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (user && (user._id || user.id) === userId && user.role === 'admin') {
       alert("Self-termination not allowed. Another admin must perform this action.");
       return;
     }
-    setUsers(prev => prev.filter(u => u.id !== userId));
+    try {
+      await authAPI.deleteUser(userId);
+      setUsers(prev => prev.filter(u => (u._id || u.id) !== userId));
+      addToast('User removed', 'info');
+    } catch (error) {
+      addToast('Failed to remove user', 'error');
+    }
   };
 
-  const updateUserRole = (userId, newRole) => {
-    if (user && user.id === userId && newRole !== 'admin') {
+  const updateUserRole = async (userId, newRole) => {
+    if (user && (user._id || user.id) === userId && newRole !== 'admin') {
        alert("You cannot demote yourself. Ask another admin.");
        return;
     }
-    setUsers(prev => prev.map(u => 
-      u.id === userId ? { ...u, role: newRole } : u
-    ));
+    try {
+      const response = await authAPI.updateRole(userId, newRole);
+      setUsers(prev => prev.map(u => 
+        (u._id || u.id) === userId ? response.data : u
+      ));
+      addToast(`Role updated to ${newRole}`, 'success');
+    } catch (error) {
+      addToast('Failed to update role', 'error');
+    }
   };
 
-  const updateUserProfile = (updates) => {
-    setUser(prev => ({ ...prev, ...updates }));
-    setUsers(prev => prev.map(u => u.email === user.email ? { ...u, ...updates } : u));
+  const updateUserProfile = async (updates) => {
+    try {
+      const response = await authAPI.updateProfile({ ...updates, email: user.email });
+      setUser(response.data);
+      setUsers(prev => prev.map(u => u.email === user.email ? response.data : u));
+      addToast('Profile updated', 'success');
+    } catch (error) {
+      addToast('Failed to update profile', 'error');
+    }
   };
 
-  const updatePassword = (email, newPassword) => {
-    setUsers(prev => prev.map(u => u.email === email ? { ...u, password: newPassword } : u));
-    return { success: true };
+  const updatePassword = async (email, newPassword) => {
+    try {
+      await authAPI.updateProfile({ email, password: newPassword });
+      addToast('Password updated', 'success');
+      return { success: true };
+    } catch (error) {
+      addToast('Failed to update password', 'error');
+      return { success: false };
+    }
   };
 
   const toggleWishlist = (product) => {
@@ -422,14 +590,19 @@ export function StoreProvider({ children }) {
     });
   };
 
-  const authenticateUser = (email, password) => {
-    const foundUser = users.find(u => u.email === email && u.password === password);
-    if (foundUser) {
-      setUser({ role: foundUser.role, name: foundUser.name, email: foundUser.email });
+  const authenticateUser = async (email, password) => {
+    try {
+      const response = await authAPI.login({ email, password });
+      const userData = response.data;
+      setUser(userData);
       setCart([]); // Clear cart on login
-      return { success: true, user: foundUser };
+      return { success: true, user: userData };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Login failed' 
+      };
     }
-    return { success: false };
   };
 
   const login = (role, name) => {
@@ -443,43 +616,80 @@ export function StoreProvider({ children }) {
   };
 
   // Category Management
-  const addCategory = (name) => {
-    const slug = name.toLowerCase().replace(/\s+/g, '-');
-    const newCategory = { id: Date.now(), name, slug };
-    setCategories(prev => [...prev, newCategory]);
+  const addCategory = async (name) => {
+    try {
+      const response = await categoryAPI.create(name);
+      setCategories(prev => [...prev, response.data]);
+      addToast('Category added', 'success');
+    } catch (error) {
+      addToast('Failed to add category', 'error');
+    }
   };
 
-  const deleteCategory = (id) => {
-    setCategories(prev => prev.filter(c => c.id !== id));
+  const deleteCategory = async (id) => {
+    try {
+      await categoryAPI.delete(id);
+      setCategories(prev => prev.filter(c => (c._id || c.id) !== id));
+      addToast('Category removed', 'info');
+    } catch (error) {
+      addToast('Failed to remove category', 'error');
+    }
   };
 
   // Product Management
-  const addProduct = (product) => {
-    const newProduct = sanitizeProducts([{
-      ...product,
-      id: Date.now()
-    }])[0];
-    setProducts(prev => [...prev, newProduct]);
+  const addProduct = async (product) => {
+    try {
+      const response = await productAPI.create(product);
+      const newProduct = sanitizeProducts([response.data])[0];
+      setProducts(prev => [...prev, newProduct]);
+      addToast('Product added successfully', 'success');
+    } catch (error) {
+      addToast('Failed to add product', 'error');
+    }
   };
 
-  const deleteProduct = (productId) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
+  const deleteProduct = async (productId) => {
+    try {
+      await productAPI.delete(productId);
+      setProducts(prev => prev.filter(p => (p._id || p.id) !== productId));
+      addToast('Product removed', 'info');
+    } catch (error) {
+      addToast('Failed to remove product', 'error');
+    }
   };
 
-  const updateProduct = (productId, updates) => {
-    setProducts(prev => prev.map(p => 
-      p.id === productId ? sanitizeProducts([{ ...p, ...updates }])[0] : p
-    ));
+  const updateProduct = async (productId, updates) => {
+    try {
+      const response = await productAPI.update(productId, updates);
+      const updatedProduct = sanitizeProducts([response.data])[0];
+      setProducts(prev => prev.map(p => 
+        (p._id || p.id) === productId ? updatedProduct : p
+      ));
+      addToast('Product updated', 'success');
+    } catch (error) {
+      addToast('Failed to update product', 'error');
+    }
   };
 
   // Coupon Management
-  const addCoupon = (couponData) => {
-    const newCoupon = { id: Date.now(), ...couponData, active: true };
-    setCoupons(prev => [...prev, newCoupon]);
+  const addCoupon = async (couponData) => {
+    try {
+      const response = await couponAPI.create(couponData);
+      setCoupons(prev => [...prev, response.data]);
+      addToast('Coupon created', 'success');
+    } catch (error) {
+      addToast('Failed to create coupon', 'error');
+    }
   };
 
-  const deleteCoupon = (id) => {
-    setCoupons(coupons.filter(c => c.id !== id));
+  const deleteCoupon = async (id) => {
+    try {
+      await couponAPI.delete(id);
+      setCoupons(prev => prev.filter(c => (c._id || c.id) !== id));
+      addToast('Coupon removed', 'info');
+    } catch (error) {
+      addToast('Failed to remove coupon', 'error');
+    }
   };
 
   const applyCoupon = (code, total) => {
@@ -498,35 +708,33 @@ export function StoreProvider({ children }) {
     };
   };
 
-  // Review Management
-  const addReview = (productId, review) => {
-    setProducts(products.map(p => {
-      if (p.id === productId) {
-        const existingReviews = Array.isArray(p.reviews) ? p.reviews : [];
-        const newReview = {
-          id: Date.now(),
-          ...review,
-          date: new Date().toISOString().split('T')[0]
-        };
-        const newReviews = [...existingReviews, newReview];
-        const avgRating = newReviews.reduce((sum, r) => sum + r.rating, 0) / newReviews.length;
-        return {
-          ...p,
-          reviews: newReviews,
-          rating: parseFloat(avgRating.toFixed(1)),
-          reviewCount: newReviews.length
-        };
-      }
-      return p;
-    }));
+  /**
+   * Adds a user review to a specific product
+   */
+  const addReview = async (productId, review) => {
+    try {
+      await productAPI.addReview(productId, {
+        ...review,
+        userId: user._id || user.id
+      });
+      
+      // Refresh products from backend to get updated rating/reviews
+      const response = await productAPI.getAll();
+      setProducts(sanitizeProducts(response.data));
+      addToast('Review added', 'success');
+    } catch (error) {
+      addToast('Failed to add review', 'error');
+    }
   };
 
-  // Currency Helpers
+  /**
+   * Formats a USD price into the currently selected currency with proper symbols
+   */
   const formatPrice = (priceInUSD) => {
     const rate = EXCHANGE_RATES[currency];
     const converted = priceInUSD * rate;
     
-    // Format based on currency for better readability
+    // Formatting precision adjustment
     const formattedNumber = converted.toLocaleString(undefined, {
       minimumFractionDigits: currency === 'PKR' ? 0 : 2,
       maximumFractionDigits: currency === 'PKR' ? 0 : 2,
@@ -535,6 +743,9 @@ export function StoreProvider({ children }) {
     return `${CURRENCY_SYMBOLS[currency]}${formattedNumber}`;
   };
 
+  /**
+   * Resets transactional data (orders, users, cart) while preserving catalog
+   */
   const factoryReset = (skipConfirm = false) => {
     if (skipConfirm || confirm('Are you sure you want to completely reset the demo data? This will clear all changes.')) {
       console.log('🔄 Factory Reset initiated...');

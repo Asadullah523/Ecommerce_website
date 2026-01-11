@@ -1,6 +1,9 @@
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Container UI component for grouping related content
+ */
 export function Card({ className, ...props }) {
   return (
     <div

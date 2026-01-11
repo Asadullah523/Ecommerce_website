@@ -1,5 +1,8 @@
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Reusable Badge UI component for status and categorization
+ */
 export function Badge({ variant = 'default', className, ...props }) {
   const variants = {
     default: 'bg-gray-800 text-gray-300',

@@ -4,6 +4,10 @@ import { Button } from '../components/ui/Button';
 import { Heart, ShoppingCart, Trash2, ArrowRight, Package, Star, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+/**
+ * Wishlist Page Component
+ * Displays the user's saved products and allows them to move items to the cart.
+ */
 export default function Wishlist() {
   const { wishlist, toggleWishlist, addToCart, user, formatPrice } = useStore();
   const navigate = useNavigate();

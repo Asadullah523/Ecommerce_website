@@ -8,6 +8,10 @@ import { Package, Search, Clock, Truck, CheckCircle2, ShieldAlert, ShoppingBag, 
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
+/**
+ * Track Order Page
+ * Allows customers to check the status of their orders using ID and email.
+ */
 export default function TrackOrder() {
   const { orders, user, updateOrderStatus, formatPrice } = useStore();
   const navigate = useNavigate();
@@ -47,7 +51,7 @@ export default function TrackOrder() {
     const orderIdInput = orderId.trim().toUpperCase();
     const emailInput = email ? email.trim().toLowerCase() : '';
 
-    // Simulate search delay for UX
+    // Processing delay for better user feedback and UX
     setTimeout(() => {
       const order = orders.find(o => {
         const idMatch = o.id.toUpperCase().includes(orderIdInput) || o.id.toUpperCase() === orderIdInput;

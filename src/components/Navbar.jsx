@@ -3,12 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Store, LogOut, Package, Search, Heart, ChevronDown, Bell, Coins } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
+/**
+ * Global Navigation Bar component
+ * Handles global search, user authentication display, cart/wishlist counts, and currency selection.
+ */
 export default function Navbar() {
   const { user, cart, logout, wishlist, searchQuery, setSearchQuery, currency, setCurrency } = useStore();
   const navigate = useNavigate();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  /**
+   * Processes the global search input and redirects to home if on another page
+   */
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
     if (window.location.pathname !== '/') {

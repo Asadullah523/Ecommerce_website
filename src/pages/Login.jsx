@@ -4,7 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Lock, Mail, ShoppingBag } from 'lucide-react';
+import { Lock, Mail, ShoppingBag, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const { login, authenticateUser } = useStore();
@@ -13,13 +13,16 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
+  // Check URL params for successful registration redirect
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
       setSuccessMessage('Account created successfully! Please sign in.');
     }
   }, [searchParams]);
 
+  // Handle login form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -30,20 +33,20 @@ export default function Login() {
     const email = formData.get('email');
     const password = formData.get('password');
 
-    // Simulate authentication delay
+    // Processing delay to enhance user feedback and UI transition
     setTimeout(() => {
-      // Check for hardcoded demo admin first (legacy support)
-      if (email === 'admin@neonmarket.com' && password === 'admin123') {
+      // Check for demo admin credentials
+      if (email === 'admin@neonmarket.com' && password === 'asadullah@5858') {
         login('admin', 'Admin');
         navigate('/vendor');
         return;
       }
 
-      // Try to authenticate as registered user
+      // Attempt to authenticate registered user from database
       const result = authenticateUser(email, password);
       
       if (result.success) {
-        // Redirect based on role
+        // Redirect based on user role
         if (result.user.role === 'admin') {
           navigate('/vendor');
         } else {
@@ -85,15 +88,24 @@ export default function Login() {
             icon={<Mail className="h-5 w-5" />}
           />
           
-          <Input
-            name="password"
-            type="password"
-            label="Password"
-            placeholder="Enter your password"
-            required
-            className="h-16 rounded-2xl bg-white/[0.03] border-white/10 px-6 font-bold text-base"
-            icon={<Lock className="h-5 w-5" />}
-          />
+          <div className="relative">
+            <Input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              label="Password"
+              placeholder="Enter your password"
+              required
+              className="h-16 rounded-2xl bg-white/[0.03] border-white/10 px-6 pr-14 font-bold text-base"
+              icon={<Lock className="h-5 w-5" />}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-[52px] text-gray-400 hover:text-accent-cyan transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
 
           {error && (
             <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-5 text-xs font-black uppercase tracking-widest text-red-400">

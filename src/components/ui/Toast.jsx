@@ -15,6 +15,9 @@ const styles = {
   warning: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.2)]'
 };
 
+/**
+ * Transient notification components for user feedback
+ */
 export function Toast({ id, message, type = 'info', onClose }) {
   const Icon = icons[type] || Info;
 

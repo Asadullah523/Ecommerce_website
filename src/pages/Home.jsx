@@ -7,6 +7,10 @@ import { Badge } from '../components/ui/Badge';
 import { Star, ShoppingCart, Filter, Heart, Sparkles, ShieldAlert } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Home Page Component
+ * Displays the product catalog with filtering, sorting, and global search integration.
+ */
 export default function Home() {
   const { products, addToCart, categories, wishlist, toggleWishlist, searchQuery, setSearchQuery, user, formatPrice } = useStore();
   const navigate = useNavigate();

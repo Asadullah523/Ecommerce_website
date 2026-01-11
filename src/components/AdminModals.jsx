@@ -3,6 +3,9 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
+/**
+ * Modal for creating new discount coupons
+ */
 function AddCouponModal({ onClose, onAdd }) {
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +75,9 @@ function AddCouponModal({ onClose, onAdd }) {
   );
 }
 
+/**
+ * Modal for adding new product categories
+ */
 function AddCategoryModal({ onClose, onAdd }) {
   const [loading, setLoading] = useState(false);
 
@@ -119,6 +125,9 @@ function AddCategoryModal({ onClose, onAdd }) {
   );
 }
 
+/**
+ * Modal for registering new administrative or customer accounts
+ */
 function AddUserModal({ onClose, onAdd }) {
   const [loading, setLoading] = useState(false);
 

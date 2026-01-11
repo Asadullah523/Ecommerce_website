@@ -1,5 +1,8 @@
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Reusable Form Input component with label and error support
+ */
 export function Input({ className, label, error, ...props }) {
   return (
     <div className="w-full">

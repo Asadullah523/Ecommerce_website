@@ -7,6 +7,10 @@ import { Package, Clock, ShoppingBag, DollarSign, X, CheckCircle2, Truck, Box, S
 import { useNavigate, Link } from 'react-router-dom';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
+/**
+ * Orders Page Component
+ * Allows customers to view their order history and track real-time delivery progress.
+ */
 export default function Orders() {
   const { orders, user, updateOrderStatus, formatPrice } = useStore();
   const navigate = useNavigate();

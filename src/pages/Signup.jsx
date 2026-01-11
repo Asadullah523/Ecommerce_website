@@ -4,18 +4,22 @@ import { useStore } from '../context/StoreContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { User, Mail, Lock, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, ShoppingBag, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export default function Signup() {
   const { registerUser, users } = useStore();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Validate email format using regex pattern
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  // Handle user registration with comprehensive validation
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -27,38 +31,40 @@ export default function Signup() {
     const confirmPassword = formData.get('confirmPassword');
     const name = formData.get('name');
 
-    // Validation
+    // Check email format
     if (!validateEmail(email)) {
       setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
 
+    // Enforce minimum password length
     if (password.length < 6) {
       setError('Password must be at least 6 characters long');
       setLoading(false);
       return;
     }
 
+    // Verify passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
-    // Check if email already exists
+    // Prevent duplicate accounts
     if (users.find(u => u.email === email)) {
       setError('An account with this email already exists');
       setLoading(false);
       return;
     }
 
-    // Register user
+    // Register new user and redirect to login
     setTimeout(() => {
       const result = registerUser({
         name,
         email,
-        password // In production, this should be hashed!
+        password
       });
 
       if (result.success) {
@@ -102,25 +108,43 @@ export default function Signup() {
             icon={<Mail className="h-5 w-5" />}
           />
           
-          <Input
-            name="password"
-            type="password"
-            label="Password"
-            placeholder="At least 6 characters"
-            required
-            className="h-16 rounded-2xl bg-white/[0.03] border-white/10 px-6 font-bold text-base"
-            icon={<Lock className="h-5 w-5" />}
-          />
+          <div className="relative">
+            <Input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              label="Password"
+              placeholder="At least 6 characters"
+              required
+              className="h-16 rounded-2xl bg-white/[0.03] border-white/10 px-6 pr-14 font-bold text-base"
+              icon={<Lock className="h-5 w-5" />}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-[52px] text-gray-400 hover:text-accent-cyan transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
 
-          <Input
-            name="confirmPassword"
-            type="password"
-            label="Confirm Password"
-            placeholder="Re-enter password"
-            required
-            className="h-16 rounded-2xl bg-white/[0.03] border-white/10 px-6 font-bold text-base"
-            icon={<Lock className="h-5 w-5" />}
-          />
+          <div className="relative">
+            <Input
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              label="Confirm Password"
+              placeholder="Re-enter password"
+              required
+              className="h-16 rounded-2xl bg-white/[0.03] border-white/10 px-6 pr-14 font-bold text-base"
+              icon={<Lock className="h-5 w-5" />}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-4 top-[52px] text-gray-400 hover:text-accent-cyan transition-colors"
+            >
+              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
 
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">

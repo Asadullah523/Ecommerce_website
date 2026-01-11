@@ -1,5 +1,9 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+/**
+ * Reusable Pagination UI component
+ * Handles page numbering and navigation for large lists (e.g., orders).
+ */
 export function Pagination({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 

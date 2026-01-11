@@ -5,6 +5,10 @@ import App from './App.jsx'
 import './index.css'
 import { StoreProvider } from './context/StoreContext'
 
+/**
+ * Application Entry Point
+ * Initializes the React root, sets up routing, and provides global state context.
+ */
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

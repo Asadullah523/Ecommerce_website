@@ -1,6 +1,9 @@
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Core Button UI component with variety of sizing and visual variants
+ */
 export function Button({ className, variant = 'primary', size = 'md', children, ...props }) {
   const variants = {
     primary: 'bg-white text-bg-900 hover:bg-gray-200',

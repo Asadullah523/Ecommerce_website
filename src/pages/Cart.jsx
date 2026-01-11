@@ -4,6 +4,10 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 
+/**
+ * Shopping Cart Page Component
+ * Allows users to manage items, adjust quantities, and view order summary before checkout.
+ */
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, formatPrice, clearCart } = useStore();
   const navigate = useNavigate();

@@ -11,6 +11,10 @@ import { Pagination } from '../components/ui/Pagination';
 import SalesChart from '../components/SalesChart';
 import PerformanceMetrics from '../components/PerformanceMetrics';
 
+/**
+ * Vendor Dashboard Component
+ * Manages administrative tasks including analytics, products, orders, and user management.
+ */
 export default function VendorDashboard() {
   const { 
     user, products = [], addProduct, deleteProduct, updateProduct, 
@@ -21,25 +25,31 @@ export default function VendorDashboard() {
     factoryReset
   } = useStore();
   
+  // Dashboard UI State
   const [activeTab, setActiveTab] = useState('analytics');
   const [analyticsTimeframe, setAnalyticsTimeframe] = useState('weekly');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(revenueGoal);
+  
+  // Modal Visibility State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  
+  // Search and Filtering State
   const [orderFilter, setOrderFilter] = useState('all');
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  
+  // Interaction and Feedback State
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
   const [expandedOrders, setExpandedOrders] = useState([]);
   const [orderPage, setOrderPage] = useState(1);
-
   const [showResetModal, setShowResetModal] = useState(false);
-  const [resetStatus, setResetStatus] = useState('idle'); // idle, success, error
+  const [resetStatus, setResetStatus] = useState('idle');
   const [pinInput, setPinInput] = useState('');
   const ordersPerPage = 5;
 
@@ -57,6 +67,7 @@ export default function VendorDashboard() {
     (u?.email || '').toLowerCase().includes(userSearch.toLowerCase())
   );
 
+  // Authorization Check: Only administrators can access this dashboard
   if (user.role !== 'admin') {
     return (
       <div className="flex min-h-[80vh] flex-col items-center justify-center p-4 text-center">
@@ -70,7 +81,7 @@ export default function VendorDashboard() {
     );
   }
 
-  // CALCULATE REAL DATA
+  // Dashboard Metrics Calculation
   const deliveredOrders = orders.filter(o => o.status === 'delivered' || o.status === 'shipped');
   const actualRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
   const totalSalesCount = orders.length;
@@ -92,10 +103,10 @@ export default function VendorDashboard() {
     ))
   );
 
-  // --- DYNAMIC ANALYTICS CALCULATIONS ---
+  // Calculate analytics data points based on timeframe
   const generateChartData = () => {
     let days = 7;
-    if (analyticsTimeframe === 'daily') days = 1; // Or maybe 1 day hourly? Let's stick to simple views for now.
+    if (analyticsTimeframe === 'daily') days = 1;
     if (analyticsTimeframe === 'monthly') days = 30;
     
     const result = [];
@@ -1196,6 +1207,9 @@ export default function VendorDashboard() {
   );
 }
 
+/**
+ * Helper component for displaying analytics metric cards
+ */
 function StatsCard({ icon: Icon, label, value, color }) {
   const themes = {
     cyan: 'bg-accent-cyan/10 text-accent-cyan border-accent-cyan/20',
@@ -1216,6 +1230,9 @@ function StatsCard({ icon: Icon, label, value, color }) {
   );
 }
 
+/**
+ * Modal component for adding or editing products in the catalog
+ */
 function AddProductModal({ onClose, onAdd, categories, editProduct }) {
   const { currency, EXCHANGE_RATES, addToast } = useStore();
   const [loading, setLoading] = useState(false);
@@ -1233,6 +1250,9 @@ function AddProductModal({ onClose, onAdd, categories, editProduct }) {
     editProduct?.categories || (editProduct?.category ? [editProduct.category] : [])
   );
 
+  /**
+   * Processes file input and converts images to Base64 for preview and storage
+   */
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     const newBase64s = await Promise.all(
@@ -1243,28 +1263,34 @@ function AddProductModal({ onClose, onAdd, categories, editProduct }) {
       }))
     );
     setUploadedImages(prev => [...prev, ...newBase64s]);
-    e.target.value = null;
+    e.target.value = null; // Clear input to allow re-upload of same file
   };
 
+  /**
+   * Validates and submits the product data after currency normalization
+   */
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.target);
     
+    // Combine manual URLs and uploaded Base64 strings
     const finalImages = [
       ...imageUrls.filter(url => url && url.trim().length > 0),
       ...uploadedImages
     ];
 
+    // Fallback image if none provided
     if (finalImages.length === 0) {
       finalImages.push('https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80');
     }
 
+    // Currency Normalization: Data is stored in USD internally
     const currentRate = (EXCHANGE_RATES && EXCHANGE_RATES[currency]) || 1;
     const priceInput = Number(formData.get('price'));
     const originalPriceInput = formData.get('originalPrice') ? Number(formData.get('originalPrice')) : null;
 
-    // Convert BACK to USD for storage
+    // Convert local price BACK to base USD for storage consistency
     const priceInUSD = priceInput / currentRate;
     const originalPriceInUSD = originalPriceInput ? originalPriceInput / currentRate : null;
 

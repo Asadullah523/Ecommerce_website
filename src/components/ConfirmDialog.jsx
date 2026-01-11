@@ -2,6 +2,10 @@ import { X } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 
+/**
+ * Reusable Confirmation Dialog component
+ * Displays a modal with custom title, message, and action buttons for critical user decisions.
+ */
 export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', confirmVariant = 'accent' }) {
   if (!isOpen) return null;
 

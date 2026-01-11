@@ -5,6 +5,10 @@ import { Button } from '../components/ui/Button';
 import { User, Mail, Shield, ShieldAlert, Package, Heart, LogOut, CheckCircle, Save, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * User Profile Page Component
+ * Allows users to view and update their personal information and security settings.
+ */
 export default function Profile() {
   const { user, updateUserProfile, wishlist, orders, logout } = useStore();
   const navigate = useNavigate();

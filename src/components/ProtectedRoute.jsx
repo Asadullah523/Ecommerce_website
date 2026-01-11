@@ -1,6 +1,9 @@
 import { Navigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 
+/**
+ * Component for protecting routes based on authentication and user roles
+ */
 export default function ProtectedRoute({ children, role = 'admin' }) {
   const { user } = useStore();
 
