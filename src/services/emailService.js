@@ -55,6 +55,19 @@ const formatCurrency = (amount, currency, rate) => {
 // Initialize EmailJS
 emailjs.init(PUBLIC_KEY);
 
+// Simple in-memory cache to prevent duplicate emails for the same order/status within a short window (10s)
+const emailCache = new Set();
+const DEDUPE_WINDOW = 10000;
+
+const isDuplicateEmail = (orderId, status = 'confirmation') => {
+  const key = `${orderId}-${status}`;
+  if (emailCache.has(key)) return true;
+
+  emailCache.add(key);
+  setTimeout(() => emailCache.delete(key), DEDUPE_WINDOW);
+  return false;
+};
+
 /**
  * The ULTIMATE Premium Receipt Generator
  * This creates the ENTIRE email content in code for maximum beauty.
@@ -297,10 +310,12 @@ const retry = async (fn, retries = 2, delay = 1000) => {
  */
 export const sendOrderConfirmation = async (order) => {
   try {
+    if (isDuplicateEmail(order.id, 'confirmed')) {
+      console.warn(`[Dedupe] Skipping duplicate confirmation email for ${order.id}`);
+      return { success: true, message: 'Duplicate prevented' };
+    }
+
     const templateParams = {
-      to_name: order.customer.name,
-      to_email: order.customer.email,
-      order_id: order.id,
       to_name: order.customer.name,
       to_email: order.customer.email,
       order_id: order.id,
@@ -342,10 +357,12 @@ export const sendOrderConfirmation = async (order) => {
  */
 export const sendStatusNotification = async (order, status) => {
   try {
+    if (isDuplicateEmail(order.id, status)) {
+      console.warn(`[Dedupe] Skipping duplicate ${status} email for ${order.id}`);
+      return { success: true, message: 'Duplicate prevented' };
+    }
+
     const templateParams = {
-      to_name: order.customer?.name || 'Customer',
-      to_email: order.customer?.email,
-      order_id: order.id,
       to_name: order.customer?.name || 'Customer',
       to_email: order.customer?.email,
       order_id: order.id,

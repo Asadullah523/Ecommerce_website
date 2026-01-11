@@ -86,7 +86,7 @@ export default function Checkout() {
     // Process order with safety checks and email notifications
     setTimeout(async () => {
       try {
-        const order = placeOrder(orderData);
+        const order = await placeOrder(orderData);
         setLastOrder(order);
         
         // Safety Valve: Force a result if email takes too long (15s)

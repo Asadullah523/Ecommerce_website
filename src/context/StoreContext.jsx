@@ -96,15 +96,14 @@ const DEFAULT_COUPONS = [
 
 // Sanitize product data for consistency and backward compatibility
 const sanitizeProducts = (prods) => {
-  if (!Array.isArray(prods)) return DEFAULT_PRODUCTS;
-  // Preserve empty arrays (intentional product deletion)
+  if (!Array.isArray(prods)) return [];
   if (prods.length === 0) return [];
   
   return prods.map(product => {
-    const { category, ...p } = product; // Remove legacy single category field
+    const { category, ...p } = product; 
     return {
       ...p,
-      id: p.id || Date.now() + Math.random(),
+      id: p._id || p.id || String(Date.now() + Math.random()),
       name: p.name || 'Unnamed Product',
       price: typeof p.price === 'number' ? p.price : 0,
       categories: Array.isArray(p.categories) ? p.categories : (category ? [category] : ['uncategorized']),
@@ -194,7 +193,7 @@ export function StoreProvider({ children }) {
   });
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('neon_products');
-    const prods = saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+    const prods = saved ? JSON.parse(saved) : [];
     return sanitizeProducts(prods);
   });
   const [cart, setCart] = useState(() => {
@@ -203,15 +202,15 @@ export function StoreProvider({ children }) {
   });
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem('neon_orders');
-    return saved ? JSON.parse(saved) : DEFAULT_ORDERS;
+    return saved ? JSON.parse(saved) : [];
   });
   const [categories, setCategories] = useState(() => {
     const saved = localStorage.getItem('neon_categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    return saved ? JSON.parse(saved) : [];
   });
   const [coupons, setCoupons] = useState(() => {
     const saved = localStorage.getItem('neon_coupons');
-    return saved ? JSON.parse(saved) : DEFAULT_COUPONS;
+    return saved ? JSON.parse(saved) : [];
   });
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -243,48 +242,37 @@ export function StoreProvider({ children }) {
         const loggedIn = user && user.role !== 'guest';
         const userId = user._id || user.id;
 
-        const [productsRes, ordersRes, categoriesRes, couponsRes, settingsRes, usersRes, cartRes, wishlistRes] = await Promise.all([
-          productAPI.getAll(),
-          user.role === 'admin' ? orderAPI.getAll() : Promise.resolve({ data: [] }),
-          categoryAPI.getAll(),
-          couponAPI.getAll(),
-          settingsAPI.getAll(),
-          user.role === 'admin' ? authAPI.getAllUsers() : Promise.resolve({ data: [] }),
-          loggedIn ? cartAPI.get(userId) : Promise.resolve({ data: { items: [] } }),
-          loggedIn ? wishlistAPI.get(userId) : Promise.resolve({ data: { products: [] } })
+      try {
+        const [productsRes, ordersRes, categoriesRes, couponsRes, settingsRes, usersRes] = await Promise.all([
+          productAPI.getAll().catch(() => ({ data: [] })),
+          orderAPI.getAll().catch(() => ({ data: [] })),
+          categoryAPI.getAll().catch(() => ({ data: [] })),
+          couponAPI.getAll().catch(() => ({ data: [] })),
+          settingsAPI.getAll().catch(() => ({ data: {} })),
+          authAPI.getAllUsers().catch(() => ({ data: [] }))
         ]);
         
-        if (productsRes.data) {
-          setProducts(sanitizeProducts(productsRes.data));
-        }
-        
-        if (ordersRes.data) {
-          setOrders(ordersRes.data);
-        }
+        const [cartRes, wishlistRes] = await Promise.all([
+          loggedIn ? cartAPI.get(userId).catch(() => ({ data: { items: [] } })) : Promise.resolve({ data: { items: [] } }),
+          loggedIn ? wishlistAPI.get(userId).catch(() => ({ data: { products: [] } })) : Promise.resolve({ data: { products: [] } })
+        ]);
 
-        if (categoriesRes.data) {
-          setCategories(categoriesRes.data);
-        }
-
-        if (couponsRes.data) {
-          setCoupons(couponsRes.data);
-        }
-
+        // Always update states to ensure "zero" data is reflected
+        setProducts(sanitizeProducts(productsRes.data || []));
+        setOrders(ordersRes.data || []);
+        setCategories(categoriesRes.data || []);
+        setCoupons(couponsRes.data || []);
+        setUsers(usersRes.data || []);
         if (settingsRes.data && settingsRes.data.revenueGoal) {
           setRevenueGoal(settingsRes.data.revenueGoal);
         }
+        setCart(cartRes.data?.items || []);
+        setWishlist(wishlistRes.data?.products || []);
 
-        if (usersRes.data) {
-          setUsers(usersRes.data);
-        }
-
-        if (cartRes.data && cartRes.data.items) {
-          setCart(cartRes.data.items);
-        }
-
-        if (wishlistRes.data && wishlistRes.data.products) {
-          setWishlist(wishlistRes.data.products);
-        }
+      } catch (error) {
+        console.error("Failed to sync data", error);
+        // Fallback to local if primary fetch is totally broken
+      }
       } catch (error) {
         console.error('Error fetching data:', error);
         addToast('Failed to connect to backend. Using local data.', 'error');
@@ -462,8 +450,8 @@ export function StoreProvider({ children }) {
       const response = await orderAPI.updateStatus(orderId, newStatus);
       const updatedOrder = response.data;
       
-      // 2. Trigger side effects (Email) if status is actually changing
-      if (updatedOrder && newStatus !== 'pending') {
+      // 2. Trigger side effects (Email) if status is now 'shipped'
+      if (updatedOrder && newStatus === 'shipped') {
         sendStatusNotification(updatedOrder, newStatus);
       }
 
@@ -747,30 +735,28 @@ export function StoreProvider({ children }) {
    * Resets transactional data (orders, users, cart) while preserving catalog
    */
   const factoryReset = (skipConfirm = false) => {
-    if (skipConfirm || confirm('Are you sure you want to completely reset the demo data? This will clear all changes.')) {
-      console.log('🔄 Factory Reset initiated...');
-      console.log('📦 Clearing transactional data (orders, users, metrics)...');
+    if (skipConfirm || confirm('Are you sure you want to completely RESET EVERYTHING? This will clear all local data and log you out.')) {
+      console.log('🔄 Full System Reset initiated...');
       
-      // Clear transactional data by setting to empty arrays (not removing, to avoid fallback to defaults)
-      localStorage.setItem('neon_orders', JSON.stringify([])); // Empty orders - no fallback to defaults
-      localStorage.setItem('neon_users', JSON.stringify([])); // Empty users
-      localStorage.setItem('neon_cart', JSON.stringify([])); // Empty cart
-      localStorage.setItem('neon_wishlist', JSON.stringify([])); // Empty wishlist
-      localStorage.removeItem('neon_revenue_goal'); // Reset monthly goal to default $5000
-      localStorage.removeItem('neon_user'); // Logout current user (will become guest)
+      // Clear EVERYTHING from LocalStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('neon_')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // Clear states immediately
+      setProducts([]);
+      setCart([]);
+      setOrders([]);
+      setCategories([]);
+      setCoupons([]);
+      setUsers([]);
+      setWishlist([]);
+      setUser({ role: 'guest', name: 'Guest' });
       
-      // Keep these intact:
-      // - neon_products (your product catalog)
-      // - neon_categories (your categories)
-      // - neon_coupons (your coupons)
-      // - neon_currency (currency preference)
-      
-      console.log('✅ Transactional data cleared to zero');
-      console.log('📦 Products, categories, and coupons preserved');
-      console.log('🔃 Reloading page...');
-      
-      // Hard reload to refresh state
-      window.location.href = window.location.href.split('?')[0];
+      console.log('✅ Local cache cleared. Redirecting...');
+      window.location.href = '/';
     }
   };
 

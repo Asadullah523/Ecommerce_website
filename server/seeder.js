@@ -4,6 +4,10 @@ import Product from './models/Product.js';
 import Category from './models/Category.js';
 import Coupon from './models/Coupon.js';
 import Settings from './models/Settings.js';
+import User from './models/User.js';
+import Order from './models/Order.js';
+import Cart from './models/Cart.js';
+import Wishlist from './models/Wishlist.js';
 import { connectDB } from './config/db.js';
 
 dotenv.config();
@@ -81,6 +85,25 @@ const products = [
     }
 ];
 
+const destroyData = async () => {
+    try {
+        await Product.deleteMany();
+        await Category.deleteMany();
+        await Coupon.deleteMany();
+        await Settings.deleteMany();
+        await User.deleteMany();
+        await Order.deleteMany();
+        await Cart.deleteMany();
+        await Wishlist.deleteMany();
+
+        console.log('All Data Destroyed (Clean Slate)!');
+        process.exit();
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        process.exit(1);
+    }
+};
+
 const importData = async () => {
     try {
         await Product.deleteMany();
@@ -93,7 +116,7 @@ const importData = async () => {
         await Coupon.insertMany(coupons);
         await Settings.insertMany(settings);
 
-        console.log('All Data Imported Successfully!');
+        console.log('Sample Data Imported Successfully!');
         process.exit();
     } catch (error) {
         console.error(`Error: ${error.message}`);
@@ -101,4 +124,8 @@ const importData = async () => {
     }
 };
 
-importData();
+if (process.argv[2] === '-d') {
+    destroyData();
+} else {
+    importData();
+}
