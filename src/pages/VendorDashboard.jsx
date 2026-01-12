@@ -1294,23 +1294,31 @@ function AddProductModal({ onClose, onAdd, categories, editProduct }) {
     const priceInUSD = priceInput / currentRate;
     const originalPriceInUSD = originalPriceInput ? originalPriceInput / currentRate : null;
 
-    onAdd({
-      name: formData.get('name'),
-      price: priceInUSD,
-      originalPrice: originalPriceInUSD,
-      categories: selectedCategories.length > 0 ? selectedCategories : ['uncategorized'],
-      description: formData.get('description'),
-      images: finalImages,
-      provider: formData.get('provider') || 'Official Store',
-      shipping: formData.get('shipping') || 'Neon Direct',
-      inStock: formData.get('inStock') === 'true',
-      rating: editProduct?.rating || 0,
-      reviewCount: editProduct?.reviewCount || 0,
-      reviews: editProduct?.reviews || []
-    });
-    setLoading(false);
-    onClose();
-    if (addToast) addToast(editProduct ? 'Product updated successfully' : 'Product created successfully', 'success');
+    try {
+      setLoading(true);
+      await onAdd({
+        name: formData.get('name'),
+        price: priceInUSD,
+        originalPrice: originalPriceInUSD,
+        categories: selectedCategories.length > 0 ? selectedCategories : ['uncategorized'],
+        description: formData.get('description'),
+        images: finalImages,
+        provider: formData.get('provider') || 'Official Store',
+        shipping: formData.get('shipping') || 'Neon Direct',
+        inStock: formData.get('inStock') === 'true',
+        rating: editProduct?.rating || 0,
+        reviewCount: editProduct?.reviewCount || 0,
+        reviews: editProduct?.reviews || []
+      });
+      
+      if (addToast) addToast(editProduct ? 'Product updated successfully' : 'Product created successfully', 'success');
+      onClose();
+    } catch (error) {
+      console.error("Submission error:", error);
+      // Error toast is already handled in StoreContext
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

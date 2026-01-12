@@ -124,6 +124,34 @@ const sanitizeProducts = (prods) => {
   });
 };
 
+const sanitizeOrders = (orders) => {
+  if (!Array.isArray(orders)) return [];
+  return orders.map(order => ({
+    ...order,
+    id: order._id || order.id || String(Date.now() + Math.random()),
+    items: (order.items || []).map(item => ({
+      ...item,
+      id: item._id || item.id
+    }))
+  }));
+};
+
+const sanitizeCategories = (cats) => {
+  if (!Array.isArray(cats)) return [];
+  return cats.map(cat => ({
+    ...cat,
+    id: cat._id || cat.id
+  }));
+};
+
+const sanitizeCoupons = (coupons) => {
+  if (!Array.isArray(coupons)) return [];
+  return coupons.map(coupon => ({
+    ...coupon,
+    id: coupon._id || coupon.id
+  }));
+};
+
 const DEFAULT_ORDERS = [
   {
     id: 'ORD-1704812000000',
@@ -259,9 +287,9 @@ export function StoreProvider({ children }) {
 
         // Always update states to ensure "zero" data is reflected
         setProducts(sanitizeProducts(productsRes.data || []));
-        setOrders(ordersRes.data || []);
-        setCategories(categoriesRes.data || []);
-        setCoupons(couponsRes.data || []);
+        setOrders(sanitizeOrders(ordersRes.data || []));
+        setCategories(sanitizeCategories(categoriesRes.data || []));
+        setCoupons(sanitizeCoupons(couponsRes.data || []));
         setUsers(usersRes.data || []);
         if (settingsRes.data && settingsRes.data.revenueGoal) {
           setRevenueGoal(settingsRes.data.revenueGoal);
