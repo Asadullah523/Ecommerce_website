@@ -555,16 +555,16 @@ export default function ProductDetail() {
         )}
 
         <div 
-          className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center animate-in zoom-in-95 duration-500"
+          className="relative w-full h-full flex items-center justify-center p-4 md:p-12 lg:p-20 animate-in zoom-in-95 duration-500"
           onClick={(e) => e.stopPropagation()}
         >
           <img 
             src={images[selectedImage]} 
             alt={product.name} 
-            className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-2xl border border-white/10 shadow-accent-cyan/10"
+            className="w-auto h-auto max-w-full max-h-full object-contain rounded-[2rem] shadow-2xl border border-white/10 shadow-accent-cyan/20"
           />
           
-          <div className="absolute bottom-[-60px] left-1/2 -translate-x-1/2 flex gap-3">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
              {images.map((_, i) => (
                 <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${selectedImage === i ? 'w-10 bg-accent-cyan' : 'w-2 bg-white/20'}`} />
              ))}
