@@ -660,6 +660,7 @@ export function StoreProvider({ children }) {
       setProducts(prev => [...prev, newProduct]);
     } catch (error) {
       addToast('Failed to add product', 'error');
+      throw error;
     }
   };
 
@@ -682,6 +683,7 @@ export function StoreProvider({ children }) {
       ));
     } catch (error) {
       addToast('Failed to update product', 'error');
+      throw error;
     }
   };
 
