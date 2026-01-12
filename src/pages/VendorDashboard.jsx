@@ -1269,7 +1269,7 @@ function AddProductModal({ onClose, onAdd, categories, editProduct }) {
   /**
    * Validates and submits the product data after currency normalization
    */
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.target);

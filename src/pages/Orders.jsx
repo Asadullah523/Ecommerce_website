@@ -23,9 +23,10 @@ export default function Orders() {
   });
 
   // Filter orders for the current user
-  const myOrders = orders.filter(o => 
-    o.customer?.email === user.email || o.customerName === user.name
-  ).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const myOrders = (orders || []).filter(o => 
+    (o.customer?.email && user?.email && o.customer.email === user.email) || 
+    (o.customerName && user?.name && o.customerName === user.name)
+  ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
   const getStatusSteps = (status) => {
     const steps = [
@@ -79,10 +80,11 @@ export default function Orders() {
         
         <div className="space-y-10">
           {myOrders.map((order) => {
-            const steps = getStatusSteps(order.status);
-            const activeIdx = getActiveStepIndex(order.status);
-            const isCancelled = order.status.startsWith('cancelled');
-            const canCancel = order.status === 'pending' || order.status === 'processing';
+            const status = order.status || 'pending';
+            const steps = getStatusSteps(status);
+            const activeIdx = getActiveStepIndex(status);
+            const isCancelled = status.startsWith('cancelled');
+            const canCancel = status === 'pending' || status === 'processing';
 
             return (
               <Card key={order.id} className="overflow-hidden bg-bg-800/40 border border-white/5 backdrop-blur-xl group hover:border-white/10 transition-all duration-500 rounded-[2.5rem] shadow-2xl">
