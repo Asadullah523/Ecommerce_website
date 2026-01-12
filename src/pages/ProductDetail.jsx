@@ -15,7 +15,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { products, addToCart, user, addReview, categories, wishlist, toggleWishlist, formatPrice, addToast } = useStore();
   
-  const product = products.find(p => p.id === parseInt(productId));
+  const product = products.find(p => String(p.id) === String(productId));
   const isWishlisted = (wishlist || []).some(item => item && item.id === product?.id);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
