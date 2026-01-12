@@ -4,7 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Star, ShoppingCart, ChevronLeft, Heart, CheckCircle2, User, ShieldAlert } from 'lucide-react';
+import { Star, ShoppingCart, ChevronLeft, Heart, CheckCircle2, User, ShieldAlert, Maximize2, X as CloseIcon, ChevronRight as NextIcon, ChevronLeft as PrevIcon } from 'lucide-react';
 
 /**
  * Product Detail Page Component
@@ -25,6 +25,7 @@ export default function ProductDetail() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   // Scroll to top when product changes
   useEffect(() => {
@@ -143,15 +144,24 @@ export default function ProductDetail() {
       <div className="grid gap-10 lg:grid-cols-12 mb-24">
         {/* Column 1: Image Gallery */}
         <div className="lg:col-span-12 xl:col-span-4 space-y-6">
-          <div className="relative aspect-[4/4.5] bg-bg-800/10 rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl group">
+          <div 
+            onClick={() => setIsLightboxOpen(true)}
+            className="relative aspect-[4/4.5] bg-bg-800/10 rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl group cursor-zoom-in"
+          >
             <img
               src={images[selectedImage]}
               alt={product.name}
               className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
             />
             
-            <div className="absolute inset-0 bg-gradient-to-t from-bg-900/60 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-bg-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+               <div className="bg-white/10 backdrop-blur-md p-4 rounded-full border border-white/20 transform scale-75 group-hover:scale-100 transition-transform duration-500">
+                  <Maximize2 className="h-6 w-6 text-white" />
+               </div>
+            </div>
+
             {product.originalPrice && product.originalPrice > product.price && (
               <div className="absolute top-8 right-8 z-20">
                 <div className="bg-accent-pink text-white font-black text-sm px-4 py-2 rounded-xl shadow-[0_0_20px_rgba(236,72,153,0.3)]">
@@ -508,6 +518,60 @@ export default function ProductDetail() {
         </div>
       )}
     </div>
+    {/* Premium Image Lightbox Modal */}
+    {isLightboxOpen && (
+      <div 
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl transition-all duration-500 animate-in fade-in"
+        onClick={() => setIsLightboxOpen(false)}
+      >
+        <button 
+          className="absolute top-10 right-10 p-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white transition-all z-[210] border border-white/10"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <CloseIcon className="h-6 w-6" />
+        </button>
+
+        {images.length > 1 && (
+          <>
+            <button 
+              className="absolute left-10 top-1/2 -translate-y-1/2 p-5 rounded-full bg-white/5 hover:bg-accent-cyan hover:text-bg-900 text-white transition-all z-[210] border border-white/10 group active:scale-90"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage((selectedImage - 1 + images.length) % images.length);
+              }}
+            >
+              <PrevIcon className="h-8 w-8" />
+            </button>
+            <button 
+              className="absolute right-10 top-1/2 -translate-y-1/2 p-5 rounded-full bg-white/5 hover:bg-accent-cyan hover:text-bg-900 text-white transition-all z-[210] border border-white/10 group active:scale-90"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage((selectedImage + 1) % images.length);
+              }}
+            >
+              <NextIcon className="h-8 w-8" />
+            </button>
+          </>
+        )}
+
+        <div 
+          className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center animate-in zoom-in-95 duration-500"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <img 
+            src={images[selectedImage]} 
+            alt={product.name} 
+            className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-2xl border border-white/10 shadow-accent-cyan/10"
+          />
+          
+          <div className="absolute bottom-[-60px] left-1/2 -translate-x-1/2 flex gap-3">
+             {images.map((_, i) => (
+                <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${selectedImage === i ? 'w-10 bg-accent-cyan' : 'w-2 bg-white/20'}`} />
+             ))}
+          </div>
+        </div>
+      </div>
+    )}
   </div>
   );
 }
