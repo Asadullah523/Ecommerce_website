@@ -455,12 +455,13 @@ export function StoreProvider({ children }) {
         ...order,
         items: cart,
         total: order.total,
+        customer: order.customer, // Full customer object (name, email, address, etc.)
         customerName: order.customer?.name || order.customerName || 'Guest',
-        user: user._id || null
+        user: user?._id || null
       };
       
       const response = await orderAPI.create(orderData);
-      const newOrder = response.data;
+      const newOrder = sanitizeOrders([response.data])[0];
       
       setOrders(prev => [newOrder, ...prev]);
       clearCart();
@@ -476,17 +477,18 @@ export function StoreProvider({ children }) {
     try {
       // 1. Update on backend
       const response = await orderAPI.updateStatus(orderId, newStatus);
-      const updatedOrder = response.data;
+      const updatedOrder = sanitizeOrders([response.data])[0];
       
-      // 2. Trigger side effects (Email) if status is now 'shipped'
-      if (updatedOrder && newStatus === 'shipped') {
+      // 2. Trigger side effects (Email) for important status changes
+      const emailStatuses = ['shipped', 'cancelled', 'cancelled_by_customer', 'delivered'];
+      if (updatedOrder && emailStatuses.includes(newStatus)) {
         sendStatusNotification(updatedOrder, newStatus);
       }
 
       // 3. Update state purely
       setOrders(prevOrders => 
         prevOrders.map(order => 
-          order._id === orderId ? updatedOrder : order
+          (order._id === orderId || order.id === orderId || order.orderId === orderId) ? updatedOrder : order
         )
       );
       addToast(`Order status updated to ${newStatus}`, 'success');

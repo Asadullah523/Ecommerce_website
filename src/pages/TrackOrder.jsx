@@ -54,7 +54,11 @@ export default function TrackOrder() {
     // Processing delay for better user feedback and UX
     setTimeout(() => {
       const order = orders.find(o => {
-        const idMatch = o.id.toUpperCase().includes(orderIdInput) || o.id.toUpperCase() === orderIdInput;
+        const idMatch = 
+          (o.orderId && o.orderId.includes(orderIdInput)) ||
+          (o.id && o.id.toUpperCase().includes(orderIdInput)) || 
+          (o._id && o._id.toUpperCase().includes(orderIdInput));
+        
         // If email is provided, it must match. If not (URL search), we allow ID-only for simplicity/UX
         const emailMatch = !emailInput || (o.customer?.email?.toLowerCase() === emailInput);
         return idMatch && emailMatch;
@@ -255,8 +259,12 @@ export default function TrackOrder() {
                 <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4 pl-1">Items Ordered</h4>
                 {foundOrder.items.map((item, idx) => (
                   <div key={idx} className="flex items-center gap-6 p-5 rounded-3xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
-                    <div className="h-16 w-16 flex-shrink-0 rounded-2xl bg-bg-900 border border-white/5 p-2 overflow-hidden">
-                      <img src={item.image || item.images?.[0]} className="h-full w-full object-contain transition-transform group-hover:scale-110" />
+                    <div className="h-16 w-16 flex-shrink-0 rounded-2xl bg-bg-900 border border-white/5 p-2 overflow-hidden flex items-center justify-center">
+                      <img 
+                        src={item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'} 
+                        className="h-full w-full object-contain transition-transform group-hover:scale-110" 
+                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'; }}
+                      />
                     </div>
                     <div className="flex-1">
                       <h5 className="font-black text-white text-base tracking-tight mb-1">{item.name}</h5>

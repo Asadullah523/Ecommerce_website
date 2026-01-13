@@ -90,7 +90,7 @@ export default function Checkout() {
         setLastOrder(order);
         
         // Safety Valve: Force a result if email takes too long (15s)
-        const emailPromise = sendOrderConfirmation(order);
+        const emailPromise = sendOrderConfirmation({ ...orderData, ...order });
         const safetyTimeout = new Promise(resolve => setTimeout(() => resolve({ success: false, error: { message: 'Wait limit reached' } }), 15000));
         
         // Race the actual email vs our local safety timer
@@ -169,7 +169,7 @@ export default function Checkout() {
           
           <h2 className="mb-2 text-3xl font-black text-white italic tracking-tighter uppercase">Order Confirmed!</h2>
           <p className="mb-8 text-sm text-gray-400 font-medium px-4">
-            Thank you for your purchase. We have sent a confirmation email to <span className="text-white">{lastOrder?.customer?.email}</span>.
+            Thank you for your purchase. We have sent a confirmation email to <span className="text-white">{lastOrder?.customer?.email || lastOrder?.email || 'your email'}</span>.
           </p>
 
           {errorMessage && (
@@ -187,7 +187,7 @@ export default function Checkout() {
           <div className="mb-8 p-6 rounded-2xl bg-bg-900/50 border border-white/5 text-left space-y-4">
              <div>
                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Order ID</p>
-               <p className="text-lg font-mono font-black text-accent-cyan">#{lastOrder?.id}</p>
+               <p className="text-lg font-mono font-black text-accent-cyan">#{lastOrder?.orderId || lastOrder?.id || lastOrder?._id || 'PENDING'}</p>
              </div>
              <div className="p-3 rounded-xl bg-accent-cyan/5 border border-accent-cyan/10">
                <p className="text-[9px] font-bold text-accent-cyan/80 leading-relaxed">
@@ -197,7 +197,7 @@ export default function Checkout() {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" onClick={() => navigate(`/track?id=${lastOrder?.id}`)} className="font-bold uppercase tracking-widest text-[10px]">
+            <Button variant="outline" onClick={() => navigate(`/track?id=${lastOrder?.orderId || lastOrder?.id || lastOrder?._id}`)} className="font-bold uppercase tracking-widest text-[10px]">
               Track Order
             </Button>
             <Button variant="accent" onClick={() => navigate('/')} className="font-bold uppercase tracking-widest text-[10px]">

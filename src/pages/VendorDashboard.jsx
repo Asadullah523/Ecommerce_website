@@ -745,9 +745,9 @@ export default function VendorDashboard() {
                     // Calculate timestamp and format date
                     const timestamp = order.createdAt 
                       ? new Date(order.createdAt)
-                      : (order.id.startsWith('ORD-') && !isNaN(order.id.split('-')[1]))
+                      : (order.id && typeof order.id === 'string' && order.id.startsWith('ORD-') && order.id.includes('-'))
                         ? new Date(Number(order.id.split('-')[1]))
-                        : new Date(order.date);
+                        : new Date(order.date || Date.now());
                     
                     const formattedDate = timestamp.toLocaleString('en-US', { 
                       month: 'short', 
@@ -764,7 +764,9 @@ export default function VendorDashboard() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                     <div className="flex-1 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                       <div className="flex items-center gap-4 mb-4">
-                        <Badge variant="outline" className="font-mono text-xs tracking-widest opacity-80 py-1 px-3 border-accent-cyan/30 text-accent-cyan bg-accent-cyan/5">#{order.id.split('-')[1] || order.id.toString().slice(-6)}</Badge>
+                        <Badge variant="outline" className="font-mono text-xs tracking-widest opacity-80 py-1 px-3 border-accent-cyan/30 text-accent-cyan bg-accent-cyan/5">
+                          #{order.orderId || (order.id && typeof order.id === 'string' && order.id.includes('-') ? order.id.split('-')[1] : (order.id || order._id || '...').toString().slice(-6))}
+                        </Badge>
                         <User className="h-5 w-5 text-accent-cyan" />
                         <span className="text-base font-black text-white uppercase tracking-widest">{order.customer?.name || order.customerName || 'Guest'}</span>
                         <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${expandedOrders.includes(order.id) ? 'rotate-180' : ''}`} />
@@ -800,8 +802,8 @@ export default function VendorDashboard() {
                           onClick={() => setConfirmDialog({
                             isOpen: true,
                             title: 'Delete Order Record',
-                            message: `Are you sure you want to permanently delete order #${order.id.split('-')[1] || order.id.toString().slice(-6)}?`,
-                            onConfirm: () => deleteOrder(order.id),
+                            message: `Are you sure you want to permanently delete order #${order.orderId || (order.id && typeof order.id === 'string' && order.id.includes('-') ? order.id.split('-')[1] : (order.id || order._id || '...').toString().slice(-6))}?`,
+                            onConfirm: () => deleteOrder(order.id || order._id),
                             confirmText: 'Delete'
                           })}
                           className="p-2 text-gray-500 hover:text-red-400 transition-colors"

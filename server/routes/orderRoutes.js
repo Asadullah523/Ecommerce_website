@@ -7,16 +7,21 @@ const router = express.Router();
 // @route   POST /api/orders
 // @access  Public (or Private with auth)
 router.post('/', async (req, res) => {
-    const { items, total, customerName, user } = req.body;
+    const { items, total, customer, customerName, user } = req.body;
 
     if (items && items.length === 0) {
         res.status(400).json({ message: 'No order items' });
         return;
     } else {
         try {
+            // Generate a random 8-digit numeric orderId
+            const orderId = Math.floor(10000000 + Math.random() * 90000000).toString();
+
             const order = new Order({
+                orderId,
                 items,
                 user,
+                customer,
                 customerName,
                 total,
             });
@@ -46,10 +51,23 @@ router.get('/', async (req, res) => {
 // @access  Private/Admin
 router.put('/:id/status', async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id);
+        const { id } = req.params;
+        // Find by MongoDB _id OR our numeric orderId
+        let order;
+        if (id.match(/^[0-9a-fA-F]{24}$/)) {
+            order = await Order.findById(id);
+        } else {
+            order = await Order.findOne({ orderId: id });
+        }
 
         if (order) {
             order.status = req.body.status || order.status;
+
+            // Backfill numeric orderId if it's an old order
+            if (!order.orderId) {
+                order.orderId = Math.floor(10000000 + Math.random() * 90000000).toString();
+            }
+
             const updatedOrder = await order.save();
             res.json(updatedOrder);
         } else {
@@ -65,7 +83,14 @@ router.put('/:id/status', async (req, res) => {
 // @access  Private/Admin
 router.delete('/:id', async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id);
+        const { id } = req.params;
+        let order;
+        if (id.match(/^[0-9a-fA-F]{24}$/)) {
+            order = await Order.findById(id);
+        } else {
+            order = await Order.findOne({ orderId: id });
+        }
+
         if (order) {
             await order.deleteOne();
             res.json({ message: 'Order removed' });
