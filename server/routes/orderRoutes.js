@@ -52,11 +52,13 @@ router.get('/', async (req, res) => {
 router.put('/:id/status', async (req, res) => {
     try {
         const { id } = req.params;
-        // Find by MongoDB _id OR our numeric orderId
+        // Search by MongoDB _id first if it looks like one, then fallback to numeric orderId
         let order;
         if (id.match(/^[0-9a-fA-F]{24}$/)) {
             order = await Order.findById(id);
-        } else {
+        }
+
+        if (!order) {
             order = await Order.findOne({ orderId: id });
         }
 
@@ -87,7 +89,9 @@ router.delete('/:id', async (req, res) => {
         let order;
         if (id.match(/^[0-9a-fA-F]{24}$/)) {
             order = await Order.findById(id);
-        } else {
+        }
+
+        if (!order) {
             order = await Order.findOne({ orderId: id });
         }
 
