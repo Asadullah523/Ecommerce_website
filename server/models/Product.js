@@ -25,6 +25,10 @@ const productSchema = mongoose.Schema({
         required: true,
         default: 0,
     },
+    originalPrice: {
+        type: Number,
+        required: false,
+    },
     categories: [{
         type: String,
         required: true,
@@ -48,6 +52,11 @@ const productSchema = mongoose.Schema({
         type: String,
         required: true,
         default: 'Neon Tech Official',
+    },
+    shipping: {
+        type: String,
+        required: false,
+        default: 'Neon Direct',
     },
     description: {
         type: String,

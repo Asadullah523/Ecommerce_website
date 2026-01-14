@@ -94,7 +94,7 @@ export default function Orders() {
                     <div className="flex items-center gap-4">
                        <span className="text-xs font-black text-gray-500 uppercase tracking-[0.3em]">Order ID</span>
                        <Badge variant="outline" className="font-mono text-sm bg-white/5 border-white/10 text-accent-cyan py-1.5 px-4 rounded-xl">
-                         #{typeof order.id === 'string' && order.id.includes('-') ? order.id.split('-')[1] : (String(order.id).slice(-6).toUpperCase())}
+                         #{order.displayId}
                        </Badge>
                     </div>
                     <div className="flex items-center gap-6 text-sm font-black text-gray-400 uppercase tracking-widest pt-2">
@@ -111,7 +111,7 @@ export default function Orders() {
                           setConfirmDialog({
                             isOpen: true,
                             title: 'Cancel Order',
-                            message: `Are you sure you want to cancel order #${order.id.split('-')[1] || order.id}? This action is irreversible.`,
+                            message: `Are you sure you want to cancel order #${order.displayId}? This action is irreversible.`,
                             onConfirm: () => updateOrderStatus(order.id, 'cancelled_by_customer'),
                             confirmText: 'Yes, Cancel'
                           });

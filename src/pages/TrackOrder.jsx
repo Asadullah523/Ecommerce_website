@@ -146,7 +146,7 @@ export default function TrackOrder() {
                   <input 
                     type="text" 
                     required
-                    placeholder="ORD-12345678"
+                    placeholder="12345678"
                     value={searchData.orderId}
                     onChange={(e) => setSearchData({...searchData, orderId: e.target.value})}
                     className="w-full bg-white/[0.03] border border-white/10 text-sm font-bold text-white px-6 py-5 rounded-[1.5rem] outline-none focus:border-accent-cyan/40 focus:bg-white/[0.05] transition-all duration-300"
@@ -203,7 +203,7 @@ export default function TrackOrder() {
                   <div className="flex items-center gap-3">
                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Order Details</span>
                      <Badge variant="outline" className="font-mono text-[11px] bg-white/5 border-white/10 text-accent-cyan py-1 px-4 rounded-lg">
-                       #{foundOrder.id.split('-')[1] || foundOrder.id}
+                       #{foundOrder.displayId}
                      </Badge>
                   </div>
                   <div className="flex items-center gap-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest pt-1">
@@ -280,22 +280,44 @@ export default function TrackOrder() {
               {/* Footer Details */}
               <div className="p-8 bg-white/[0.03] border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1 opacity-60">Payment Method</span>
-                      <span className="text-[11px] font-black text-white uppercase tracking-wider">
-                        {foundOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online'}
-                      </span>
+                       <span className="text-[11px] font-black text-white uppercase tracking-wider">
+                         {foundOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online'}
+                       </span>
                     </div>
+                    
+                    {/* Payment Status for non-COD */}
+                    {foundOrder.paymentMethod !== 'cod' && (
+                       <>
+                          <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
+                          <div className="flex flex-col">
+                             <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1 opacity-60">Payment Status</span>
+                             {foundOrder.isPaid ? (
+                               <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] font-black uppercase tracking-widest w-fit">PAID</Badge>
+                             ) : (
+                               <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[10px] font-black uppercase tracking-widest w-fit">UNPAID</Badge>
+                             )}
+                          </div>
+                          {foundOrder.transactionId && (
+                             <>
+                                <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
+                                <div className="flex flex-col">
+                                   <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1 opacity-60">Transaction ID</span>
+                                   <span className="text-[11px] font-mono font-black text-gray-400 uppercase tracking-wider">{foundOrder.transactionId}</span>
+                                </div>
+                             </>
+                          )}
+                       </>
+                    )}
+
                     <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1 opacity-60">Delivery Location</span>
-                      <span className="text-[11px] font-black text-white uppercase tracking-wider">{foundOrder.customer?.city || 'New York'}, {foundOrder.customer?.zip || '10001'}</span>
+                       <div className="flex flex-col">
+                         <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1 opacity-60">Delivery Location</span>
+                         <span className="text-[11px] font-black text-white uppercase tracking-wider">{foundOrder.customer?.city || 'New York'}, {foundOrder.customer?.zip || '10001'}</span>
+                       </div>
                     </div>
-                 </div>
-                 <div className="flex items-center gap-3 text-accent-cyan text-[10px] font-black uppercase tracking-widest italic animate-pulse">
-                    <CheckCircle2 className="h-4 w-4" /> Tracking Enabled
-                 </div>
-              </div>
+                  <div className="px-8 mt-8 flex items-center gap-3 text-accent-cyan text-[10px] font-black uppercase tracking-widest italic animate-pulse">
+                     <CheckCircle2 className="h-4 w-4" /> Tracking Enabled
+                  </div>
 
               {/* Order Actions */}
               {(foundOrder.status === 'pending' || foundOrder.status === 'processing') && (

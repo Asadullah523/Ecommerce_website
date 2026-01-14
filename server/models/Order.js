@@ -27,6 +27,7 @@ const orderSchema = mongoose.Schema({
         address: { type: String, required: false },
         city: { type: String, required: false },
         zip: { type: String, required: false },
+        phone: { type: String, required: false },
     },
     customerName: {
         type: String,
@@ -43,6 +44,21 @@ const orderSchema = mongoose.Schema({
         required: true,
         default: 'pending',
         enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'cancelled_by_customer'],
+    },
+    paymentMethod: {
+        type: String,
+        required: true,
+        default: 'card',
+        enum: ['card', 'cod', 'jazzcash', 'easypaisa'],
+    },
+    transactionId: {
+        type: String,
+        required: false,
+    },
+    isPaid: {
+        type: Boolean,
+        required: true,
+        default: false,
     },
     date: {
         type: String,

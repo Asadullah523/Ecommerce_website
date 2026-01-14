@@ -47,7 +47,7 @@ export default function PerformanceMetrics({ metrics }) {
                 ></div>
              </div>
           </div>
-          <div className="text-[10px] text-gray-400 font-bold mt-2">Target: {formatPrice(revenueGoal)}</div>
+          <div className="text-[10px] text-gray-400 font-bold mt-2">{formatPrice(revenueGoal)}</div>
         </div>
         <div className="h-12 w-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)] ml-4">
           <Target className="h-6 w-6" />

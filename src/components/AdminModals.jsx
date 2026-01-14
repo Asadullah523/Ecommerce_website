@@ -18,6 +18,7 @@ function AddCouponModal({ onClose, onAdd }) {
       code: formData.get('code').toUpperCase(),
       discount: Number(formData.get('discount')),
       type: formData.get('type'),
+      expiryDate: formData.get('expiryDate') || null,
     });
     
     setLoading(false);
@@ -62,6 +63,12 @@ function AddCouponModal({ onClose, onAdd }) {
               </select>
             </div>
           </div>
+          
+          <Input 
+            name="expiryDate" 
+            type="date" 
+            label="Expiration Date (Optional)" 
+          />
 
           <div className="pt-2 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

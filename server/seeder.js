@@ -26,7 +26,7 @@ const coupons = [
 ];
 
 const settings = [
-    { key: 'revenueGoal', value: 5000 },
+    { key: 'revenueGoal', value: 0 },
 ];
 
 const products = [

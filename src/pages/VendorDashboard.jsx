@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Plus, Package, DollarSign, TrendingUp, Trash2, ShoppingBag, User, Clock, Tag, X, Edit2, Image as ImageIcon, ChevronDown, Mail, Search, ChevronLeft, ChevronRight, Activity, Zap, Waves, Target, Check, ShieldAlert } from 'lucide-react';
+import { Plus, Package, DollarSign, TrendingUp, Trash2, ShoppingBag, User, Clock, Tag, X, Edit2, Image as ImageIcon, ChevronDown, Mail, Search, ChevronLeft, ChevronRight, Activity, Zap, Waves, Target, Check, ShieldAlert, Calendar } from 'lucide-react';
 import { AddCouponModal, AddCategoryModal, AddUserModal } from '../components/AdminModals';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Pagination } from '../components/ui/Pagination';
@@ -18,11 +18,11 @@ import PerformanceMetrics from '../components/PerformanceMetrics';
 export default function VendorDashboard() {
   const { 
     user, products = [], addProduct, deleteProduct, updateProduct, 
-    orders = [], updateOrderStatus, categories = [], coupons = [], addCoupon, deleteCoupon, addCategory, deleteCategory,
+    orders = [], updateOrderStatus, verifyPayment, categories = [], coupons = [], addCoupon, deleteCoupon, addCategory, deleteCategory,
     users = [], deleteUser, updateUserRole, registerUser,
     deleteOrder, deleteCancelledOrders, addToCart,
-    revenueGoal, setRevenueGoal, formatPrice, currency, EXCHANGE_RATES,
-    factoryReset
+    revenueGoal, setRevenueGoal, paymentInfo, setPaymentInfo, formatPrice, currency, EXCHANGE_RATES,
+    factoryReset, savePaymentSettings
   } = useStore();
   
   // Dashboard UI State
@@ -212,6 +212,7 @@ export default function VendorDashboard() {
               { id: 'users', label: 'Users', icon: User, count: safeUsersCount },
               { id: 'coupons', label: 'Coupons', icon: Tag, count: coupons.length },
               { id: 'categories', label: 'Categories', icon: Package, count: categories.length },
+              { id: 'settings', label: 'Settings', icon: Zap, count: null },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -745,8 +746,8 @@ export default function VendorDashboard() {
                     // Calculate timestamp and format date
                     const timestamp = order.createdAt 
                       ? new Date(order.createdAt)
-                      : (order.id && typeof order.id === 'string' && order.id.startsWith('ORD-') && order.id.includes('-'))
-                        ? new Date(Number(order.id.split('-')[1]))
+                      : (order.id && typeof order.id === 'string' && order.id.length > 10)
+                        ? new Date(Number(order.id))
                         : new Date(order.date || Date.now());
                     
                     const formattedDate = timestamp.toLocaleString('en-US', { 
@@ -764,9 +765,9 @@ export default function VendorDashboard() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                     <div className="flex-1 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                       <div className="flex items-center gap-4 mb-4">
-                        <Badge variant="outline" className="font-mono text-xs tracking-widest opacity-80 py-1 px-3 border-accent-cyan/30 text-accent-cyan bg-accent-cyan/5">
-                          #{order.orderId || (order.id && typeof order.id === 'string' && order.id.includes('-') ? order.id.split('-')[1] : (order.id || order._id || '...').toString().slice(-6))}
-                        </Badge>
+                        <Badge variant="outline" className="font-mono text-sm bg-white/5 border-white/10 text-accent-cyan py-1.5 px-4 rounded-xl">
+                         #{order.displayId}
+                       </Badge>
                         <User className="h-5 w-5 text-accent-cyan" />
                         <span className="text-base font-black text-white uppercase tracking-widest">{order.customer?.name || order.customerName || 'Guest'}</span>
                         <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${expandedOrders.includes(order.id) ? 'rotate-180' : ''}`} />
@@ -802,7 +803,7 @@ export default function VendorDashboard() {
                           onClick={() => setConfirmDialog({
                             isOpen: true,
                             title: 'Delete Order Record',
-                            message: `Are you sure you want to permanently delete order #${order.orderId || (order.id && typeof order.id === 'string' && order.id.includes('-') ? order.id.split('-')[1] : (order.id || order._id || '...').toString().slice(-6))}?`,
+                            message: `Are you sure you want to permanently delete order #${order.displayId}?`,
                             onConfirm: () => deleteOrder(order.id || order._id),
                             confirmText: 'Delete'
                           })}
@@ -868,12 +869,41 @@ export default function VendorDashboard() {
                                   </div>
                                </div>
                                <div className="pt-6 border-t border-white/5">
-                                  <div className="flex justify-between items-center">
+                                   <div className="flex justify-between items-center mb-4">
                                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Payment Method</span>
-                                     <Badge variant="outline" className="text-[11px] py-1 px-4 uppercase border-white/10 text-gray-400 font-black tracking-widest bg-white/5">
-                                        {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online'}
-                                     </Badge>
-                                  </div>
+                                     <div className="flex items-center gap-2">
+                                       <Badge variant="outline" className="text-[11px] py-1 px-4 uppercase border-white/10 text-gray-400 font-black tracking-widest bg-white/5">
+                                          {order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentMethod}
+                                       </Badge>
+                                       {order.isPaid ? (
+                                         <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] font-black uppercase tracking-widest">PAID</Badge>
+                                       ) : (
+                                         <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[10px] font-black uppercase tracking-widest">UNPAID</Badge>
+                                       )}
+                                     </div>
+                                   </div>
+                                   
+                                   {order.transactionId && (
+                                     <div className="p-4 rounded-xl bg-bg-900 border border-white/5 mb-4">
+                                       <div className="flex justify-between items-center mb-1">
+                                         <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Transaction ID</div>
+                                         <button className="text-[10px] text-accent-cyan font-bold hover:underline">Copy</button>
+                                       </div>
+                                       <div className="font-mono text-white text-lg font-bold tracking-wider">{order.transactionId}</div>
+                                     </div>
+                                   )}
+
+                                   {/* Manual Payment Verification Action */}
+                                   {!order.isPaid && order.transactionId && (
+                                      <Button 
+                                        size="sm" 
+                                        variant="accent" 
+                                        className="w-full bg-green-600 hover:bg-green-500 text-white border-none font-black uppercase tracking-widest text-[10px] py-3"
+                                        onClick={() => verifyPayment(order.id)}
+                                      >
+                                        <Check className="h-4 w-4 mr-2" /> Verify & Mark Paid
+                                      </Button>
+                                   )}
                                </div>
                             </div>
                          </div>
@@ -992,9 +1022,17 @@ export default function VendorDashboard() {
                     <span className="text-3xl font-black text-white bg-bg-900 px-5 py-2 rounded-2xl border border-gray-700 shadow-neon-blue tracking-tighter">{coupon.code}</span>
                     <button onClick={() => deleteCoupon(coupon.id)} className="text-gray-500 hover:text-red-400 p-2 bg-white/5 rounded-lg transition-colors"><Trash2 className="h-5 w-5" /></button>
                   </div>
-                  <div className="text-lg font-black text-accent-cyan flex items-center gap-2">
-                    <Tag className="h-5 w-5" />
-                    {coupon.type === 'percentage' ? `${coupon.discount}% OFF` : `${formatPrice(coupon.discount)} OFF`}
+                  <div className="flex flex-col gap-2">
+                    <div className="text-lg font-black text-accent-cyan flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      {coupon.type === 'percentage' ? `${coupon.discount}% OFF` : `${formatPrice(coupon.discount)} OFF`}
+                    </div>
+                    {coupon.expiryDate && (
+                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                        <Calendar className="h-3 w-3" />
+                        Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -1041,6 +1079,98 @@ export default function VendorDashboard() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="space-y-8">
+             <Card className="bg-bg-800 border-gray-700 p-10 rounded-[2rem]">
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic mb-8">Payment Configuration</h3>
+                
+                <div className="space-y-8 max-w-xl">
+                   {/* JazzCash Section */}
+                   <div className="space-y-4 p-6 bg-bg-900/50 rounded-2xl border border-red-500/10">
+                      <div className="flex items-center gap-3 mb-2">
+                         <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                           <Zap className="h-4 w-4" />
+                         </div>
+                         <h4 className="text-lg font-black text-white uppercase tracking-wider">JazzCash Settings</h4>
+                      </div>
+                      <div>
+                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Account Title</label>
+                         <Input 
+                           placeholder="e.g. Asad Ullah"
+                           value={paymentInfo?.jazzcash?.title || ''}
+                           onChange={(e) => setPaymentInfo(prev => ({ 
+                             ...prev, 
+                             jazzcash: { ...(prev?.jazzcash || {}), title: e.target.value } 
+                           }))}
+                           className="bg-bg-800 border-gray-700 text-white focus:border-red-500"
+                         />
+                      </div>
+                      <div>
+                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Account Number</label>
+                         <Input 
+                           placeholder="e.g. 0300-1234567"
+                           value={paymentInfo?.jazzcash?.number || ''}
+                           onChange={(e) => setPaymentInfo(prev => ({ 
+                             ...prev, 
+                             jazzcash: { ...(prev?.jazzcash || {}), number: e.target.value } 
+                           }))}
+                           className="bg-bg-800 border-gray-700 text-white focus:border-red-500 font-mono"
+                         />
+                      </div>
+                   </div>
+
+                   {/* EasyPaisa Section */}
+                   <div className="space-y-4 p-6 bg-bg-900/50 rounded-2xl border border-green-500/10">
+                      <div className="flex items-center gap-3 mb-2">
+                         <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500">
+                           <Zap className="h-4 w-4" />
+                         </div>
+                         <h4 className="text-lg font-black text-white uppercase tracking-wider">EasyPaisa Settings</h4>
+                      </div>
+                      <div>
+                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Account Title</label>
+                         <Input 
+                           placeholder="e.g. Asad Ullah"
+                           value={paymentInfo?.easypaisa?.title || ''}
+                           onChange={(e) => setPaymentInfo(prev => ({ 
+                             ...prev, 
+                             easypaisa: { ...(prev?.easypaisa || {}), title: e.target.value } 
+                           }))}
+                           className="bg-bg-800 border-gray-700 text-white focus:border-green-500"
+                         />
+                      </div>
+                      <div>
+                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Account Number</label>
+                         <Input 
+                           placeholder="e.g. 0300-1234567"
+                           value={paymentInfo?.easypaisa?.number || ''}
+                           onChange={(e) => setPaymentInfo(prev => ({ 
+                             ...prev, 
+                             easypaisa: { ...(prev?.easypaisa || {}), number: e.target.value } 
+                           }))}
+                           className="bg-bg-800 border-gray-700 text-white focus:border-green-500 font-mono"
+                         />
+                      </div>
+                   </div>
+
+
+                   <div className="pt-6 border-t border-gray-700/50 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-white uppercase italic tracking-tighter">Save Configuration</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Updates will be synced to the backend</p>
+                      </div>
+                      <Button 
+                        onClick={() => savePaymentSettings()}
+                        className="bg-accent-cyan text-bg-950 px-8 font-black uppercase tracking-tighter italic hover:scale-105 transition-transform"
+                      >
+                        Save Settings
+                      </Button>
+                   </div>
+                </div>
+             </Card>
           </div>
         )}
       </div>

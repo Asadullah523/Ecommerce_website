@@ -126,14 +126,26 @@ const sanitizeProducts = (prods) => {
 
 const sanitizeOrders = (orders) => {
   if (!Array.isArray(orders)) return [];
-  return orders.map(order => ({
-    ...order,
-    id: order._id || order.id || String(Date.now() + Math.random()),
-    items: (order.items || []).map(item => ({
-      ...item,
-      id: item._id || item.id
-    }))
-  }));
+  return orders.map(order => {
+    const rawId = order._id || order.id || '';
+    // Use the backend-generated numeric orderId if available. 
+    // Fallback to a deterministic numeric hash of the MongoDB ID (strictly digits).
+    let displayId = order.orderId;
+    if (!displayId && rawId) {
+      const hexPart = rawId.toString().slice(-8);
+      displayId = (parseInt(hexPart, 16) % 90000000 + 10000000).toString();
+    }
+    
+    return {
+      ...order,
+      id: rawId,
+      displayId: displayId || 'PENDING',
+      items: (order.items || []).map(item => ({
+        ...item,
+        id: item._id || item.id
+      }))
+    };
+  });
 };
 
 const sanitizeCategories = (cats) => {
@@ -154,7 +166,7 @@ const sanitizeCoupons = (coupons) => {
 
 const DEFAULT_ORDERS = [
   {
-    id: 'ORD-1704812000000',
+    id: '17048120',
     customerName: 'Alex Chen',
     total: 199.99,
     status: 'delivered',
@@ -162,7 +174,7 @@ const DEFAULT_ORDERS = [
     items: [{ id: 1, name: 'Cyberpunk Headphones', price: 199.99, quantity: 1 }]
   },
   {
-    id: 'ORD-1704813000000',
+    id: '17048130',
     customerName: 'Sarah Jenkins',
     total: 79.99,
     status: 'shipped',
@@ -170,7 +182,7 @@ const DEFAULT_ORDERS = [
     items: [{ id: 2, name: 'Neon Gaming Mouse', price: 79.99, quantity: 1 }]
   },
   {
-    id: 'ORD-1704814000000',
+    id: '17048140',
     customerName: 'Marcus Vane',
     total: 349.98,
     status: 'delivered',
@@ -181,7 +193,7 @@ const DEFAULT_ORDERS = [
     ]
   },
   {
-    id: 'ORD-1704815000000',
+    id: '17048150',
     customerName: 'Marcus Vane',
     total: 79.99,
     status: 'pending',
@@ -189,7 +201,7 @@ const DEFAULT_ORDERS = [
     items: [{ id: 2, name: 'Neon Gaming Mouse', price: 79.99, quantity: 1 }]
   },
   {
-    id: 'ORD-1704816000000',
+    id: '17048160',
     customerName: 'Sarah Jenkins',
     total: 199.99,
     status: 'processing',
@@ -197,7 +209,7 @@ const DEFAULT_ORDERS = [
     items: [{ id: 1, name: 'Cyberpunk Headphones', price: 199.99, quantity: 1 }]
   },
   {
-    id: 'ORD-1704817000000',
+    id: '17048170',
     customerName: 'Alex Chen',
     total: 149.99,
     status: 'shipped',
@@ -252,10 +264,17 @@ export function StoreProvider({ children }) {
   });
   const [revenueGoal, setRevenueGoal] = useState(() => {
     const saved = localStorage.getItem('neon_revenue_goal');
-    return saved ? Number(saved) : 5000;
+    return saved ? Number(saved) : 0;
   });
   const [currency, setCurrency] = useState(() => {
     return localStorage.getItem('neon_currency') || 'PKR';
+  });
+  const [paymentInfo, setPaymentInfo] = useState(() => {
+     const saved = localStorage.getItem('neon_payment_info');
+     return saved ? JSON.parse(saved) : { 
+       jazzcash: { title: '', number: '' }, 
+       easypaisa: { title: '', number: '' } 
+     };
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -293,6 +312,15 @@ export function StoreProvider({ children }) {
         setUsers(usersRes.data || []);
         if (settingsRes.data && settingsRes.data.revenueGoal) {
           setRevenueGoal(settingsRes.data.revenueGoal);
+        }
+        if (settingsRes.data && settingsRes.data.paymentInfo) {
+          const fetchedInfo = settingsRes.data.paymentInfo;
+          // Ensure structure is correct (migration from legacy)
+          const migratedInfo = {
+            jazzcash: fetchedInfo.jazzcash || { title: fetchedInfo.accountTitle || '', number: fetchedInfo.accountNumber || '' },
+            easypaisa: fetchedInfo.easypaisa || { title: '', number: '' }
+          };
+          setPaymentInfo(migratedInfo);
         }
         setCart(cartRes.data?.items || []);
         setWishlist(wishlistRes.data?.products || []);
@@ -335,6 +363,23 @@ export function StoreProvider({ children }) {
     };
     if (!loading) updateGoal();
   }, [revenueGoal, loading]);
+
+  // Ensure local storage is always in sync with state for persistence across reloads
+  useEffect(() => {
+    localStorage.setItem('neon_payment_info', JSON.stringify(paymentInfo));
+  }, [paymentInfo]);
+
+  const savePaymentSettings = async () => {
+     try {
+       await settingsAPI.update('paymentInfo', paymentInfo);
+       addToast('Payment settings saved successfully', 'success');
+       return true;
+     } catch (error) {
+       console.error('Failed to save payment settings:', error);
+       addToast('Failed to save payment settings', 'error');
+       return false;
+     }
+  };
 
   useEffect(() => {
     localStorage.setItem('neon_currency', currency);
@@ -405,7 +450,7 @@ export function StoreProvider({ children }) {
    */
   const addToCart = (product) => {
     if (user.role === 'admin') {
-      alert("Admin accounts cannot make purchases. Please use a customer account to shop.");
+      addToast("Admin accounts cannot make purchases. Please use a customer account to shop.", "warning");
       return;
     }
     if (!product || typeof product !== 'object') return;
@@ -498,6 +543,23 @@ export function StoreProvider({ children }) {
     }
   };
 
+  const verifyPayment = async (orderId) => {
+    try {
+      const response = await orderAPI.updateStatus(orderId, { isPaid: true });
+      const updatedOrder = sanitizeOrders([response.data])[0];
+      
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          (order._id === orderId || order.id === orderId || order.orderId === orderId) ? updatedOrder : order
+        )
+      );
+      addToast('Payment verified successfully', 'success');
+    } catch (error) {
+      console.error('Failed to verify payment:', error);
+      addToast('Failed to verify payment', 'error');
+    }
+  };
+
   /**
    * Removes an order from history
    */
@@ -546,7 +608,7 @@ export function StoreProvider({ children }) {
 
   const deleteUser = async (userId) => {
     if (user && (user._id || user.id) === userId && user.role === 'admin') {
-      alert("Self-termination not allowed. Another admin must perform this action.");
+      addToast("Self-termination not allowed. Another admin must perform this action.", "error");
       return;
     }
     try {
@@ -560,7 +622,7 @@ export function StoreProvider({ children }) {
 
   const updateUserRole = async (userId, newRole) => {
     if (user && (user._id || user.id) === userId && newRole !== 'admin') {
-       alert("You cannot demote yourself. Ask another admin.");
+       addToast("You cannot demote yourself. Ask another admin.", "error");
        return;
     }
     try {
@@ -711,7 +773,19 @@ export function StoreProvider({ children }) {
   };
 
   const applyCoupon = (code, total) => {
-    const coupon = coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.active);
+    const coupon = coupons.find(c => {
+      const isMatch = c.code.toUpperCase() === code.toUpperCase() && c.active;
+      if (!isMatch) return false;
+      
+      // Validation check for expiryDate if it exists
+      if (c.expiryDate) {
+        const expiry = new Date(c.expiryDate);
+        expiry.setHours(23, 59, 59, 999); 
+        if (new Date() > expiry) return false;
+      }
+      return true;
+    });
+    
     if (!coupon) return { valid: false, error: 'Invalid or expired coupon code' };
     
     const discount = coupon.type === 'percentage' 
@@ -795,7 +869,7 @@ export function StoreProvider({ children }) {
       user, login, logout, users, registerUser, authenticateUser, deleteUser, updateUserRole, updateUserProfile, updatePassword,
       products, addProduct, deleteProduct, updateProduct,
       cart, addToCart, removeFromCart, updateQuantity, clearCart,
-      orders, placeOrder, updateOrderStatus, deleteOrder, deleteCancelledOrders,
+      orders, placeOrder, updateOrderStatus, verifyPayment, deleteOrder, deleteCancelledOrders,
       categories, addCategory, deleteCategory,
       coupons, addCoupon, deleteCoupon, applyCoupon,
       wishlist, toggleWishlist,
@@ -803,7 +877,8 @@ export function StoreProvider({ children }) {
       revenueGoal, setRevenueGoal,
       addReview,
       currency, setCurrency, formatPrice, EXCHANGE_RATES,
-      toasts, addToast, removeToast, factoryReset
+      paymentInfo, setPaymentInfo,
+      toasts, addToast, removeToast, factoryReset, savePaymentSettings
     }}>
       {children}
     </StoreContext.Provider>

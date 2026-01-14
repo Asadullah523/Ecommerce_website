@@ -7,7 +7,7 @@ const router = express.Router();
 // @route   POST /api/orders
 // @access  Public (or Private with auth)
 router.post('/', async (req, res) => {
-    const { items, total, customer, customerName, user } = req.body;
+    const { items, total, customer, customerName, user, paymentMethod, transactionId } = req.body;
 
     if (items && items.length === 0) {
         res.status(400).json({ message: 'No order items' });
@@ -24,6 +24,8 @@ router.post('/', async (req, res) => {
                 customer,
                 customerName,
                 total,
+                paymentMethod,
+                transactionId,
             });
 
             const createdOrder = await order.save();
@@ -63,7 +65,8 @@ router.put('/:id/status', async (req, res) => {
         }
 
         if (order) {
-            order.status = req.body.status || order.status;
+            if (req.body.status) order.status = req.body.status;
+            if (req.body.isPaid !== undefined) order.isPaid = req.body.isPaid;
 
             // Backfill numeric orderId if it's an old order
             if (!order.orderId) {

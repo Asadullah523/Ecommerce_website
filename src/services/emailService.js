@@ -56,7 +56,17 @@ const isDuplicateEmail = (orderId, status = 'confirmation') => {
 const generateFullEmailHTML = (order) => {
   const items = order.items || [];
   const customer = order.customer || { name: 'Valued Customer' };
-  const orderId = order.orderId || order.id || order._id || 'PENDING';
+  const rawId = order.orderId || order.id || order._id || 'PENDING';
+  let orderId = 'PENDING';
+  if (rawId !== 'PENDING') {
+    if (order.orderId) {
+      orderId = order.orderId;
+    } else {
+      // Deterministic numeric hash fallback
+      const hexPart = rawId.toString().slice(-8);
+      orderId = (parseInt(hexPart, 16) % 90000000 + 10000000).toString();
+    }
+  }
 
   const itemRows = items.map(item => `
     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -138,8 +148,17 @@ const generateFullEmailHTML = (order) => {
 const generateStatusEmailHTML = (order, status) => {
   const items = order.items || [];
   const customer = order.customer || { name: 'Valued Customer' };
-  const orderId = order.orderId || order.id || order._id || 'PENDING';
-  const displayId = orderId === 'PENDING' ? 'PENDING' : orderId.toString().slice(-8).toUpperCase();
+  const rawId = order.orderId || order.id || order._id || 'PENDING';
+  let displayId = 'PENDING';
+  if (rawId !== 'PENDING') {
+    if (order.orderId) {
+      displayId = order.orderId;
+    } else {
+      const hexPart = rawId.toString().slice(-8);
+      displayId = (parseInt(hexPart, 16) % 90000000 + 10000000).toString();
+    }
+  }
+  const orderId = rawId; // Keep rawId for links
 
   const itemRows = items.map(item => `
     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -223,7 +242,7 @@ const retry = async (fn, retries = 2, delay = 1000) => {
 export const sendOrderConfirmation = async (order) => {
   try {
     const customer = order.customer || { name: 'Customer', email: 'support@neonmarket.com' };
-    const orderId = order.orderId || order.id || order._id || 'ORD-' + Date.now();
+    const orderId = order.orderId || order.id || order._id || Date.now().toString().slice(-8);
 
     if (isDuplicateEmail(orderId, 'confirmed')) return { success: true };
 
@@ -255,7 +274,7 @@ export const sendOrderConfirmation = async (order) => {
 export const sendStatusNotification = async (order, status) => {
   try {
     const customer = order.customer || { name: 'Customer', email: 'support@neonmarket.com' };
-    const orderId = order.orderId || order.id || order._id || 'ORD-' + Date.now();
+    const orderId = order.orderId || order.id || order._id || Date.now().toString().slice(-8);
 
     if (isDuplicateEmail(orderId, status)) return { success: true };
 

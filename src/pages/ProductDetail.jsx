@@ -79,7 +79,7 @@ export default function ProductDetail() {
     }
 
     if (!reviewText.trim()) {
-      alert('Please write a review');
+      addToast('Please write a review', 'warning');
       return;
     }
 
@@ -101,7 +101,7 @@ export default function ProductDetail() {
       setTimeout(() => setReviewSuccess(false), 5000);
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Failed to submit review. Please try again.');
+      addToast('Failed to submit review. Please try again.', 'error');
     }
   };
 

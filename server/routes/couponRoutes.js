@@ -17,9 +17,9 @@ router.get('/', async (req, res) => {
 // @desc    Create a coupon
 // @route   POST /api/coupons
 router.post('/', async (req, res) => {
-    const { code, discount, type } = req.body;
+    const { code, discount, type, expiryDate } = req.body;
     try {
-        const coupon = new Coupon({ code, discount, type });
+        const coupon = new Coupon({ code, discount, type, expiryDate });
         const createdCoupon = await coupon.save();
         res.status(201).json(createdCoupon);
     } catch (error) {

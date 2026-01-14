@@ -34,7 +34,7 @@ export const authAPI = {
 export const orderAPI = {
     create: (data) => API.post('/orders', data),
     getAll: () => API.get('/orders'),
-    updateStatus: (id, status) => API.put(`/orders/${id}/status`, { status }),
+    updateStatus: (id, status) => API.put(`/orders/${id}/status`, typeof status === 'object' ? status : { status }),
     delete: (id) => API.delete(`/orders/${id}`),
     clearCancelled: () => API.delete('/orders/status/cancelled'),
 };
