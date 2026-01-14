@@ -15,9 +15,19 @@ import wishlistRoutes from './routes/wishlistRoutes.js';
 dotenv.config();
 
 // Connect to database
-connectDB();
+// connectDB(); // Removed to prevent potential race conditions in serverless; using middleware instead.
 
 const app = express();
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+    } catch (error) {
+        console.error('Database connection failed in middleware:', error);
+    }
+    next();
+});
 
 // Body parser
 app.use(express.json());
