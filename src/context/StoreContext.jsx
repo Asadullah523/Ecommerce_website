@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { sendStatusNotification } from '../services/emailService';
+import { sendStatusNotification, sendOrderConfirmation } from '../services/emailService';
 import { productAPI, authAPI, orderAPI, categoryAPI, couponAPI, settingsAPI, cartAPI, wishlistAPI } from '../services/api';
 
 // Currency exchange rates (USD as base currency)
@@ -475,6 +475,34 @@ export function StoreProvider({ children }) {
     }
   }, [cart, user, loading]);
 
+  // Real-time Background Polling for Admins
+  // Checks for new orders every 10 seconds without affecting UI loading state
+  useEffect(() => {
+    let interval;
+    if (user && user.role === 'admin') {
+      interval = setInterval(async () => {
+        try {
+          const response = await orderAPI.getAll();
+          const newOrders = sanitizeOrders(response.data || []);
+          
+          setOrders(prevOrders => {
+            // If we have more orders than before, notify the admin
+            if (newOrders.length > prevOrders.length) {
+              const diff = newOrders.length - prevOrders.length;
+              addToast(`${diff} new order${diff > 1 ? 's' : ''} received!`, 'success');
+              return newOrders;
+            }
+            // If content of orders changed but length is same (e.g. status updates)
+            return newOrders;
+          });
+        } catch (error) {
+          console.error('Background order sync failed:', error);
+        }
+      }, 10000); // 10 seconds
+    }
+    return () => clearInterval(interval);
+  }, [user, addToast]);
+
   // Core Business Logic Actions
   
   /**
@@ -896,6 +924,26 @@ export function StoreProvider({ children }) {
     }
   };
 
+  const reverifyEmailConfig = async () => {
+    try {
+      addToast('Testing EmailJS connection...', 'info');
+      const dummyOrder = {
+        id: 'TEST-CONFIG',
+        total: 100,
+        currency: 'USD',
+        customer: { name: 'Admin Test', email: user.email }
+      };
+      const result = await sendOrderConfirmation(dummyOrder);
+      if (result.success) {
+        addToast('Email connection successful! Check your inbox.', 'success');
+      } else {
+        addToast(`Email Failed: ${result.error}`, 'error');
+      }
+    } catch (e) {
+      addToast(`System Error: ${e.message}`, 'error');
+    }
+  };
+
   return (
     <StoreContext.Provider value={{
       user, login, logout, users, registerUser, authenticateUser, deleteUser, updateUserRole, updateUserProfile, updatePassword,
@@ -910,7 +958,7 @@ export function StoreProvider({ children }) {
       addReview,
       currency, setCurrency, formatPrice, EXCHANGE_RATES,
       paymentInfo, setPaymentInfo,
-      toasts, addToast, removeToast, factoryReset, savePaymentSettings
+      toasts, addToast, removeToast, factoryReset, savePaymentSettings, reverifyEmailConfig
     }}>
       {children}
     </StoreContext.Provider>

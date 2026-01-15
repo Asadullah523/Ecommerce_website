@@ -1147,7 +1147,7 @@ export default function VendorDashboard() {
                          <Input 
                            placeholder="e.g. 0300-1234567"
                            value={paymentInfo?.easypaisa?.number || ''}
-                           onChange={(e) => setPaymentInfo(prev => ({ 
+                            onChange={(e) => setPaymentInfo(prev => ({ 
                              ...prev, 
                              easypaisa: { ...(prev?.easypaisa || {}), number: e.target.value } 
                            }))}
@@ -1156,19 +1156,49 @@ export default function VendorDashboard() {
                       </div>
                    </div>
 
-
-                   <div className="pt-6 border-t border-gray-700/50 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-white uppercase italic tracking-tighter">Save Configuration</p>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Updates will be synced to the backend</p>
-                      </div>
+                   <div className="pt-8 border-t border-white/5">
                       <Button 
-                        onClick={() => savePaymentSettings()}
-                        className="bg-accent-cyan text-bg-950 px-8 font-black uppercase tracking-tighter italic hover:scale-105 transition-transform"
+                        onClick={savePaymentSettings}
+                        className="w-full bg-accent-cyan hover:bg-cyan-400 text-black font-black uppercase tracking-widest py-4"
                       >
                         Save Settings
                       </Button>
                    </div>
+                </div>
+             </Card>
+
+             <Card className="bg-bg-800 border-gray-700 p-10 rounded-[2rem] mt-8">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Email Service Diagnostics</h3>
+                    <p className="text-gray-400 text-sm mt-1">Verify your EmailJS connection and template configuration.</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-2xl bg-accent-purple/10 flex items-center justify-center text-accent-purple">
+                    <Mail className="h-6 w-6" />
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-6">
+                   <div className="flex items-start gap-4">
+                      <div className="p-3 rounded-xl bg-bg-900 border border-white/10">
+                        <ShieldCheck className="h-5 w-5 text-accent-cyan" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-sm">Automated Health Check</h4>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          This tool will send a test order confirmation to your email (<span className="text-white font-medium">{user.email}</span>). 
+                          If it fails, it will provide the specific error message from EmailJS.
+                        </p>
+                      </div>
+                   </div>
+
+                   <Button 
+                     onClick={reverifyEmailConfig}
+                     variant="outline"
+                     className="w-full border-accent-purple/30 text-accent-purple hover:bg-accent-purple/10 font-black uppercase tracking-widest py-4"
+                   >
+                     Test Email Connection
+                   </Button>
                 </div>
              </Card>
           </div>

@@ -264,7 +264,8 @@ export const sendOrderConfirmation = async (order) => {
     return { success: true, response };
   } catch (error) {
     console.error('EMAIL FAILURE:', error);
-    return { success: false, error };
+    const errorMsg = error?.text || error?.message || 'EmailJS connection failed';
+    return { success: false, error: errorMsg };
   }
 };
 
@@ -296,6 +297,7 @@ export const sendStatusNotification = async (order, status) => {
     return { success: true, response };
   } catch (error) {
     console.error('STATUS EMAIL FAILURE:', error);
-    return { success: false, error };
+    const errorMsg = error?.text || error?.message || 'EmailJS connection failed';
+    return { success: false, error: errorMsg };
   }
 };

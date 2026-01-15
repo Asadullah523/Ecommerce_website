@@ -16,14 +16,21 @@ const Wishlist = lazy(() => import('./pages/Wishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
 const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 
+import { useStore } from './context/StoreContext';
+import LoadingSplash from './components/ui/LoadingSplash';
+
 // Main Application Component
 function App() {
+  const { loading } = useStore();
+
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-bg-900 flex items-center justify-center">
-        <div className="h-10 w-10 border-4 border-accent-cyan border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    }>
+    <>
+      {loading && <LoadingSplash />}
+      <Suspense fallback={
+        <div className="min-h-screen bg-bg-900 flex items-center justify-center">
+          <div className="h-10 w-10 border-4 border-accent-cyan border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -44,6 +51,7 @@ function App() {
         </Route>
       </Routes>
     </Suspense>
+    </>
   );
 }
 

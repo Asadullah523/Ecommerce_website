@@ -61,7 +61,7 @@ export default function Checkout() {
   const [emailStatus, setEmailStatus] = useState('idle'); // 'idle', 'sending', 'success', 'error'
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
     setLoading(true);
     setEmailStatus('sending');
@@ -85,43 +85,30 @@ export default function Checkout() {
       exchangeRate: EXCHANGE_RATES[currency] || 1,
     };
 
-    // Process order with safety checks and email notifications
-    setTimeout(async () => {
-      try {
-        const order = await placeOrder(orderData);
-        setLastOrder(order);
-        
-        // Safety Valve: Force a result if email takes too long (15s)
-        const emailPromise = sendOrderConfirmation({ ...orderData, ...order });
-        const safetyTimeout = new Promise(resolve => setTimeout(() => resolve({ success: false, error: { message: 'Wait limit reached' } }), 15000));
-        
-        // Race the actual email vs our local safety timer
-        const emailResult = await Promise.race([emailPromise, safetyTimeout]);
-        
-        // CRITICAL UPDATE: Always show success tick if order places, even if email fails (Soft Fail)
-        if (emailResult.success) {
-          setEmailStatus('success');
-          setErrorMessage(''); 
-        } else {
-          console.warn("Email warning:", emailResult.error);
-          // Still show success, but maybe with a note in component (implemented below)
-          setEmailStatus('success'); 
-          setErrorMessage('Email confirmation could not be sent. Please save your Order ID.');
+    try {
+      // 1. Place order immediately (No artificial delays)
+      const order = await placeOrder(orderData);
+      setLastOrder(order);
+      
+      // 2. Fire email confirmation in background (NON-BLOCKING)
+      sendOrderConfirmation({ ...orderData, ...order }).then(result => {
+        if (!result.success) {
+          console.warn("Email background failure:", result.error);
+          setErrorMessage('Note: Confirmation email failed to send, but your order is safe.');
         }
+      });
 
-        setTimeout(() => {
-            setLoading(false);
-            setStep(2);
-        }, 1500); 
+      // 3. Move to success screen instantly
+      setEmailStatus('success');
+      setLoading(false);
+      setStep(2);
 
-      } catch (err) {
-        // Catch critical code execution errors only
-        console.error("Critical Checkout Error:", err);
-        setErrorMessage('System Processing Error');
-        setEmailStatus('error');
-        setLoading(false);
-      }
-    }, 2000);
+    } catch (err) {
+      console.error("Critical Checkout Error:", err);
+      setErrorMessage('System Processing Error. Please try again.');
+      setEmailStatus('error');
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
