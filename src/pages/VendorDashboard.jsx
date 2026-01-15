@@ -978,7 +978,7 @@ export default function VendorDashboard() {
                           {u.email !== user.email && (
                             <>
                               <button 
-                                onClick={() => updateUserRole(u.id, u.role === 'admin' ? 'customer' : 'admin')} 
+                                onClick={() => updateUserRole(u._id || u.id, u.role === 'admin' ? 'customer' : 'admin')} 
                                 className="text-xs font-black uppercase tracking-[0.2em] text-accent-cyan hover:text-white transition-colors underline decoration-accent-cyan/30 underline-offset-4"
                               >
                                 {u.role === 'admin' ? 'Demote' : 'Promote'}
@@ -988,7 +988,7 @@ export default function VendorDashboard() {
                                   isOpen: true,
                                   title: 'Delete User',
                                   message: `Permanently delete user "${u.name}"? This cannot be undone.`,
-                                  onConfirm: () => deleteUser(u.id),
+                                  onConfirm: () => deleteUser(u._id || u.id),
                                   confirmText: 'Delete User'
                                 })}
                                 className="text-gray-400 hover:text-red-400 p-2 bg-white/5 rounded-lg transition-colors"
