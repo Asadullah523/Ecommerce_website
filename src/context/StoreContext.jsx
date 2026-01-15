@@ -107,7 +107,7 @@ const sanitizeProducts = (prods) => {
       name: p.name || 'Unnamed Product',
       price: typeof p.price === 'number' ? p.price : 0,
       categories: Array.isArray(p.categories) ? p.categories : (category ? [category] : ['uncategorized']),
-      images: Array.isArray(p.images) ? p.images : [p.image].filter(Boolean),
+      images: (Array.isArray(p.images) && p.images.length > 0) ? p.images : [p.image].filter(Boolean),
       reviews: Array.isArray(p.reviews) ? p.reviews.map(r => ({
         ...r,
         id: r.id || Date.now() + Math.random(),
@@ -126,7 +126,7 @@ const sanitizeProducts = (prods) => {
 
 const sanitizeOrders = (orders) => {
   if (!Array.isArray(orders)) return [];
-  return orders.map(order => {
+  return orders.filter(Boolean).map(order => {
     const rawId = order._id || order.id || '';
     // Use the backend-generated numeric orderId if available. 
     // Fallback to a deterministic numeric hash of the MongoDB ID (strictly digits).
@@ -140,7 +140,7 @@ const sanitizeOrders = (orders) => {
       ...order,
       id: rawId,
       displayId: displayId || 'PENDING',
-      items: (order.items || []).map(item => ({
+      items: (order.items || []).filter(item => item && (item._id || item.id)).map(item => ({
         ...item,
         id: item._id || item.id
       }))
@@ -232,9 +232,14 @@ export function StoreProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('neon_products');
-    const prods = saved ? JSON.parse(saved) : [];
-    return sanitizeProducts(prods);
+    try {
+      const saved = localStorage.getItem('neon_products');
+      const prods = saved ? JSON.parse(saved) : [];
+      return sanitizeProducts(Array.isArray(prods) ? prods : []);
+    } catch (e) {
+      console.error('Failed to parse local products:', e);
+      return [];
+    }
   });
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem('neon_cart');
@@ -361,12 +366,18 @@ export function StoreProvider({ children }) {
         console.error('Failed to update revenue goal on server:', error);
       }
     };
-    if (!loading) updateGoal();
+    if (!loading) {
+      updateGoal().catch(console.error);
+    }
   }, [revenueGoal, loading]);
 
   // Ensure local storage is always in sync with state for persistence across reloads
   useEffect(() => {
-    localStorage.setItem('neon_payment_info', JSON.stringify(paymentInfo));
+    try {
+      localStorage.setItem('neon_payment_info', JSON.stringify(paymentInfo));
+    } catch (e) {
+      console.error('Failed to save payment info to localStorage:', e);
+    }
   }, [paymentInfo]);
 
   const savePaymentSettings = async () => {
@@ -382,31 +393,52 @@ export function StoreProvider({ children }) {
   };
 
   useEffect(() => {
-    localStorage.setItem('neon_currency', currency);
+    try {
+      localStorage.setItem('neon_currency', currency);
+    } catch (e) {
+      console.error('Failed to save currency to localStorage:', e);
+    }
   }, [currency]);
 
   useEffect(() => {
-    localStorage.setItem('neon_user', JSON.stringify(user));
+    try {
+      localStorage.setItem('neon_user', JSON.stringify(user));
+    } catch (e) {
+      console.error('Failed to save user to localStorage:', e);
+    }
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('neon_users', JSON.stringify(users));
+    try {
+      localStorage.setItem('neon_users', JSON.stringify(users));
+    } catch (e) {
+      console.error('Failed to save users to localStorage:', e);
+    }
   }, [users]);
 
+  // Products sync: Save metadata and external links only to localStorage.
+  // This allows instant loading without hitting the QuotaExceededError (5MB limit).
   useEffect(() => {
-    // Validate products before saving
-    const validProducts = products.map(p => ({
-      ...p,
-      images: Array.isArray(p.images) ? p.images : [p.image].filter(Boolean),
-      reviews: Array.isArray(p.reviews) ? p.reviews : [],
-      rating: typeof p.rating === 'number' ? p.rating : 0,
-      reviewCount: typeof p.reviewCount === 'number' ? p.reviewCount : 0
-    }));
-    localStorage.setItem('neon_products', JSON.stringify(validProducts));
+    try {
+      const storageProducts = (products || []).filter(Boolean).map(p => ({
+        ...p,
+        // Strip out large Base64 strings (data:) to save space, keep http links
+        images: (p.images || []).filter(img => typeof img === 'string' && !img.startsWith('data:')),
+        image: typeof p.image === 'string' && !p.image.startsWith('data:') ? p.image : null,
+      }));
+      localStorage.setItem('neon_products', JSON.stringify(storageProducts));
+    } catch (e) {
+      // If we still hit a limit, we just gracefully fail; backend is the source of truth
+      console.warn('LocalStorage sync partial failure (likely quota):', e);
+    }
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('neon_wishlist', JSON.stringify(Array.isArray(wishlist) ? wishlist : []));
+    try {
+      localStorage.setItem('neon_wishlist', JSON.stringify(Array.isArray(wishlist) ? wishlist : []));
+    } catch (e) {
+      console.error('Failed to save wishlist to localStorage:', e);
+    }
     const syncWishlist = async () => {
       if (user && user.role !== 'guest' && !loading) {
         try {

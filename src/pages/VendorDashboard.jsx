@@ -1387,8 +1387,32 @@ function AddProductModal({ onClose, onAdd, categories, editProduct }) {
    */
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
+    
+    // Limits: Max 5 images total, Max 10MB each
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_IMAGES = 5;
+    
+    if (uploadedImages.length + files.length > MAX_IMAGES) {
+      if (addToast) addToast(`Maximum ${MAX_IMAGES} images allowed per product.`, 'warning');
+      e.target.value = null;
+      return;
+    }
+
+    const validFiles = files.filter(file => {
+      if (file.size > MAX_SIZE) {
+        if (addToast) addToast(`Image "${file.name}" exceeds 10MB limit.`, 'error');
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) {
+      e.target.value = null;
+      return;
+    }
+
     const newBase64s = await Promise.all(
-      files.map(file => new Promise((resolve) => {
+      validFiles.map(file => new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result);
         reader.readAsDataURL(file);

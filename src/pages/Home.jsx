@@ -161,9 +161,14 @@ export default function Home() {
               >
                 <div className="relative aspect-video overflow-hidden bg-bg-900/30">
                   <img
-                    src={product.images?.[0] || product.image}
+                    src={product.images?.[0] || product.image || 'https://via.placeholder.com/400x300?text=No+Image'}
                     alt={product.name}
                     className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                    onError={(e) => {
+                      if (e.target.src !== 'https://via.placeholder.com/400x300?text=Broken+Link') {
+                        e.target.src = 'https://via.placeholder.com/400x300?text=Broken+Link';
+                      }
+                    }}
                   />
   
                   {/* Overlay Controls */}
