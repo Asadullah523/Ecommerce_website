@@ -319,7 +319,13 @@ export function StoreProvider({ children }) {
 
         // Only update if we got a valid response (not null from catch)
         if (productsRes) setProducts(sanitizeProducts(productsRes.data || []));
-        if (ordersRes) setOrders(sanitizeOrders(ordersRes.data || []));
+        if (ordersRes) {
+          console.log('🔍 DEBUG: Raw orders from backend:', ordersRes.data);
+          const sanitized = sanitizeOrders(ordersRes.data || []);
+          console.log('🔍 DEBUG: Sanitized orders:', sanitized);
+          console.log('🔍 DEBUG: Order count:', sanitized.length);
+          setOrders(sanitized);
+        }
         if (categoriesRes) setCategories(sanitizeCategories(categoriesRes.data || []));
         if (couponsRes) setCoupons(sanitizeCoupons(couponsRes.data || []));
         if (usersRes) setUsers(usersRes.data || []);
@@ -518,18 +524,26 @@ export function StoreProvider({ children }) {
   }, [cart, user, loading]);
 
   // Real-time Background Polling for Admins
-  // Checks for new orders every 10 seconds without affecting UI loading state
+  // Checks for new orders every 5 seconds without affecting UI loading state
   useEffect(() => {
     let interval;
     if (user && user.role === 'admin') {
+      console.log('🔄 Admin polling enabled - checking for new orders every 5 seconds');
       interval = setInterval(async () => {
         try {
+          console.log('🔄 Polling backend for orders...');
           const response = await orderAPI.getAll();
-          if (!response?.data) return;
+          if (!response?.data) {
+            console.warn('⚠️ No data in polling response');
+            return;
+          }
 
+          console.log('✅ Polling successful, raw orders:', response.data.length);
           const syncedOrders = sanitizeOrders(response.data);
+          console.log('✅ Sanitized orders:', syncedOrders.length);
           
           setOrders(prev => {
+            console.log('📊 Previous order count:', prev.length, 'New order count:', syncedOrders.length);
             // Detect genuinely new orders (higher count than before)
             if (syncedOrders.length > prev.length && prev.length > 0) {
               const diff = syncedOrders.length - prev.length;
@@ -538,7 +552,7 @@ export function StoreProvider({ children }) {
             return syncedOrders;
           });
         } catch (error) {
-          console.error('Background admin sync failed:', error);
+          console.error('❌ Background admin sync failed:', error);
         }
       }, 5000);
     }
