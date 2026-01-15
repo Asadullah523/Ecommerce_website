@@ -248,6 +248,11 @@ export function StoreProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
   const [orders, setOrders] = useState(() => {
+    // Admin users should NEVER use cached orders - always fetch fresh from backend
+    // This prevents localStorage conflicts with real-time backend data
+    if (user?.role === 'admin') {
+      return [];
+    }
     const saved = localStorage.getItem('neon_orders');
     return saved ? JSON.parse(saved) : [];
   });
@@ -426,12 +431,16 @@ export function StoreProvider({ children }) {
   }, [users]);
 
   useEffect(() => {
+    // Admin users should NEVER cache orders in localStorage
+    // This prevents stale data from interfering with backend sync
+    if (user?.role === 'admin') return;
+    
     try {
       localStorage.setItem('neon_orders', JSON.stringify(orders));
     } catch (e) {
       console.error('Failed to save orders to localStorage:', e);
     }
-  }, [orders]);
+  }, [orders, user?.role]);
 
   // Products sync: Save metadata and critical images to localStorage.
   useEffect(() => {
@@ -777,6 +786,13 @@ export function StoreProvider({ children }) {
       const userData = response.data;
       // Force immediate persistence so API interceptor has the token for immediate re-fetches
       localStorage.setItem('neon_user', JSON.stringify(userData));
+      
+      // Clear stale order cache for admin users to force fresh backend fetch
+      if (userData.role === 'admin') {
+        localStorage.removeItem('neon_orders');
+        setOrders([]); // Clear orders state to force refetch
+      }
+      
       setUser(userData);
       setCart([]); // Clear cart on login
       return { success: true, user: userData };
