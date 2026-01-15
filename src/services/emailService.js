@@ -60,10 +60,7 @@ const generateFullEmailHTML = (order) => {
 
   const itemRows = items.map(item => `
     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-      <td style="padding: 15px 0; width: 64px;">
-        <img src="${item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'}" alt="${item.name || 'Product'}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(0,242,255,0.25); display: block; box-shadow: 0 8px 20px rgba(0,0,0,0.3);" onerror="this.src='https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'">
-      </td>
-      <td style="padding: 15px 15px; text-align: left;">
+      <td style="padding: 15px 0; text-align: left;">
         <div style="font-weight: 800; font-size: 15px; color: #ffffff; margin-bottom: 4px; line-height: 1.2; letter-spacing: -0.01em;">${item.name || 'Tech Gear'}</div>
         <div style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Qty: ${item.quantity || 1} &bull; ${formatCurrency(item.price || 0, order.currency, order.exchangeRate)}</div>
       </td>
@@ -142,10 +139,7 @@ const generateStatusEmailHTML = (order, status) => {
 
   const itemRows = items.map(item => `
     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-      <td style="padding: 15px 0; width: 64px;">
-        <img src="${item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'}" alt="${item.name || 'Product'}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); display: block;" onerror="this.src='https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'">
-      </td>
-      <td style="padding: 15px 15px; text-align: left;">
+      <td style="padding: 15px 0; text-align: left;">
         <div style="font-weight: 800; font-size: 15px; color: #ffffff; margin-bottom: 4px; line-height: 1.2;">${item.name || 'Tech Gear'}</div>
         <div style="color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase;">Qty: ${item.quantity || 1}</div>
       </td>

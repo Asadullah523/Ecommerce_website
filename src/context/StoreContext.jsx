@@ -516,25 +516,25 @@ export function StoreProvider({ children }) {
       interval = setInterval(async () => {
         try {
           const response = await orderAPI.getAll();
-          const newOrders = sanitizeOrders(response.data || []);
+          if (!response?.data) return;
+
+          const syncedOrders = sanitizeOrders(response.data);
           
-          setOrders(prevOrders => {
-            // If we have more orders than before, notify the admin
-            if (newOrders.length > prevOrders.length) {
-              const diff = newOrders.length - prevOrders.length;
+          setOrders(prev => {
+            // Detect genuinely new orders (higher count than before)
+            if (syncedOrders.length > prev.length && prev.length > 0) {
+              const diff = syncedOrders.length - prev.length;
               addToast(`${diff} new order${diff > 1 ? 's' : ''} received!`, 'success');
-              return newOrders;
             }
-            // If content of orders changed but length is same (e.g. status updates)
-            return newOrders;
+            return syncedOrders;
           });
         } catch (error) {
-          console.error('Background order sync failed:', error);
+          console.error('Background admin sync failed:', error);
         }
-      }, 5000); // 5 seconds (Improved for real-time)
+      }, 5000);
     }
     return () => clearInterval(interval);
-  }, [user, addToast]);
+  }, [user?.role, user?._id]); // Depend on role and ID specifically for stability
 
   // Core Business Logic Actions
   
@@ -591,9 +591,15 @@ export function StoreProvider({ children }) {
     try {
       const orderData = {
         ...order,
-        items: cart,
+        // Payload Optimization: Only send the first image URL/metadata for each item.
+        // Stripping heavy Base64 strings prevents Vercel 4.5MB payload limit errors.
+        items: cart.map(item => ({
+          ...item,
+          image: typeof item.image === 'string' && item.image.startsWith('data:') ? null : item.image,
+          images: (item.images || []).filter(img => typeof img === 'string' && !img.startsWith('data:')).slice(0, 1)
+        })),
         total: order.total,
-        customer: order.customer, // Full customer object (name, email, address, etc.)
+        customer: order.customer,
         customerName: order.customer?.name || order.customerName || 'Guest',
         user: user?._id || null
       };

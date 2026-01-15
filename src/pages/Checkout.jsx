@@ -108,7 +108,9 @@ export default function Checkout() {
 
     } catch (err) {
       console.error("Critical Checkout Error:", err);
-      setErrorMessage('System Processing Error. Please try again.');
+      // More descriptive error for API failures
+      const detailedError = err.response?.data?.message || err.message || 'System Processing Error';
+      setErrorMessage(detailedError);
       setEmailStatus('error');
       setLoading(false);
     }
