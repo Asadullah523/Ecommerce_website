@@ -49,7 +49,9 @@ router.get('/', async (req, res) => {
         console.log(`📊 Order collection has ${count} documents`);
 
         console.log('📦 Executing find query...');
-        const orders = await Order.find({}).sort({ createdAt: -1 }).lean();
+        // REMOVED .sort() to avoid "Sort exceeded memory limit" error
+        // Frontend handles sorting anyway (VendorDashboard.jsx line 716-724)
+        const orders = await Order.find({}).lean();
         console.log(`✅ Successfully fetched ${orders.length} orders`);
 
         res.json(orders);
