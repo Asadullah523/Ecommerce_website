@@ -41,9 +41,14 @@ router.post('/', async (req, res) => {
 // @access  Private/Admin
 router.get('/', async (req, res) => {
     try {
+        console.log('📦 Fetching all orders from database...');
         const orders = await Order.find({}).sort({ createdAt: -1 });
+        console.log(`✅ Successfully fetched ${orders.length} orders`);
         res.json(orders);
     } catch (error) {
+        console.error('❌ Error fetching orders:', error);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
         res.status(500).json({ message: error.message });
     }
 });

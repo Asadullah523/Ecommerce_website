@@ -23,10 +23,16 @@ const app = express();
 app.use(async (req, res, next) => {
     try {
         await connectDB();
+        next();
     } catch (error) {
-        console.error('Database connection failed in middleware:', error);
+        console.error('❌ Database connection failed in middleware:', error);
+        console.error('MONGO_URI exists:', !!process.env.MONGO_URI);
+        console.error('MONGO_URI preview:', process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 20) + '...' : 'MISSING');
+        res.status(500).json({
+            message: 'Database connection failed',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        });
     }
-    next();
 });
 
 // Body parser
