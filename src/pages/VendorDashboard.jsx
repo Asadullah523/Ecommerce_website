@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Plus, Package, DollarSign, TrendingUp, Trash2, ShoppingBag, User, Clock, Tag, X, Edit2, Image as ImageIcon, ChevronDown, Mail, Search, ChevronLeft, ChevronRight, Activity, Zap, Waves, Target, Check, ShieldAlert, Calendar } from 'lucide-react';
+import { Plus, Package, DollarSign, TrendingUp, Trash2, ShoppingBag, User, Clock, Tag, X, Edit2, Image as ImageIcon, ChevronDown, Mail, Search, ChevronLeft, ChevronRight, Activity, Zap, Waves, Target, Check, ShieldAlert, Calendar, ShieldCheck } from 'lucide-react';
 import { AddCouponModal, AddCategoryModal, AddUserModal } from '../components/AdminModals';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Pagination } from '../components/ui/Pagination';
@@ -22,7 +22,7 @@ export default function VendorDashboard() {
     users = [], deleteUser, updateUserRole, registerUser,
     deleteOrder, deleteCancelledOrders, addToCart,
     revenueGoal, setRevenueGoal, paymentInfo, setPaymentInfo, formatPrice, currency, EXCHANGE_RATES,
-    factoryReset, savePaymentSettings
+    factoryReset, savePaymentSettings, reverifyEmailConfig
   } = useStore();
   
   // Dashboard UI State

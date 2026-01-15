@@ -8,7 +8,7 @@ import { useStore } from '../context/StoreContext';
  * Handles global search, user authentication display, cart/wishlist counts, and currency selection.
  */
 export default function Navbar() {
-  const { user, cart, logout, wishlist, searchQuery, setSearchQuery, currency, setCurrency } = useStore();
+  const { user, cart, logout, wishlist, searchQuery, setSearchQuery, currency, setCurrency, backendStatus } = useStore();
   const navigate = useNavigate();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -24,7 +24,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-white/5 bg-bg-900/60 backdrop-blur-xl transition-all duration-500">
+    <nav className="sticky top-0 z-50 border-b border-white/5 bg-bg-900/60 backdrop-blur-xl transition-all duration-500" style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
       <div className="mx-auto flex h-24 max-w-screen-2xl items-center justify-between px-6 sm:px-10 lg:px-12">
         
         {/* LOGO SECTION */}
@@ -32,8 +32,16 @@ export default function Navbar() {
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20 border border-white/10 group-hover:border-accent-cyan/50 transition-all duration-500 shadow-xl shadow-black/20">
             <Package className="h-6 w-6 text-accent-cyan group-hover:scale-110 transition-transform duration-500" />
           </div>
-          <span className="hidden md:block text-2xl font-black tracking-tighter text-white group-hover:text-accent-cyan transition-colors uppercase italic">
+          <span className="hidden md:block text-2xl font-black tracking-tighter text-white group-hover:text-accent-cyan transition-colors uppercase italic relative">
             Neon<span className="text-accent-cyan">Market</span>
+            {/* Backend Status Indicator */}
+            <div 
+              className={`absolute -right-4 top-1 h-2 w-2 rounded-full shadow-[0_0_10px] transition-all duration-500 ${
+                backendStatus === 'online' ? 'bg-accent-cyan shadow-accent-cyan animate-pulse' : 
+                backendStatus === 'offline' ? 'bg-red-500 shadow-red-500' : 'bg-yellow-500 shadow-yellow-500'
+              }`}
+              title={backendStatus === 'online' ? 'Cloud Sync: Active' : backendStatus === 'offline' ? 'Cloud Sync: Offline' : 'Syncing...'}
+            />
           </span>
         </Link>
 
@@ -138,7 +146,7 @@ export default function Navbar() {
               {showUserMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
-                  <div className="absolute right-0 mt-4 w-56 origin-top-right rounded-[1.5rem] bg-bg-800 border border-white/10 p-2 shadow-2xl backdrop-blur-xl z-20 animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="absolute right-0 mt-4 w-56 origin-top-right rounded-[1.5rem] bg-bg-800 border border-white/10 p-2 shadow-2xl backdrop-blur-xl z-20 animate-in fade-in slide-in-from-top-4 duration-300" style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
                     <div className="px-4 py-3 border-b border-white/5 mb-2">
                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">Account</p>
                        <p className="text-[11px] font-bold text-white truncate">{user.email || 'Registered User'}</p>

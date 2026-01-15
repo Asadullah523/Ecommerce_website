@@ -107,7 +107,9 @@ const sanitizeProducts = (prods) => {
       name: p.name || 'Unnamed Product',
       price: typeof p.price === 'number' ? p.price : 0,
       categories: Array.isArray(p.categories) ? p.categories : (category ? [category] : ['uncategorized']),
-      images: (Array.isArray(p.images) && p.images.length > 0) ? p.images : [p.image].filter(Boolean),
+      images: (Array.isArray(p.images) && p.images.length > 0) 
+        ? p.images.filter(img => img && typeof img === 'string') 
+        : [p.image].filter(img => img && typeof img === 'string'),
       reviews: Array.isArray(p.reviews) ? p.reviews.map(r => ({
         ...r,
         id: r.id || Date.now() + Math.random(),
@@ -283,8 +285,9 @@ export function StoreProvider({ children }) {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'online' | 'offline' | 'checking'
+  const [toasts, setToasts] = useState([]);
 
   // Fetch initial data from backend
   useEffect(() => {
@@ -329,14 +332,16 @@ export function StoreProvider({ children }) {
           setPaymentInfo(migratedInfo);
         }
         setCart(cartRes.data?.items || []);
-        setWishlist(wishlistRes.data?.products || []);
-
+        if (productsRes) setBackendStatus('online');
+        else setBackendStatus('offline');
       } catch (error) {
         console.error("Failed to sync data", error);
+        setBackendStatus('offline');
         // Fallback to local if primary fetch is totally broken
       }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setBackendStatus('offline');
         addToast('Failed to connect to backend. Using local data.', 'error');
       } finally {
         // Guarantee splash screen stays for at least 1.5s to allow rendering buffer
@@ -347,7 +352,7 @@ export function StoreProvider({ children }) {
     };
 
     fetchData();
-  }, [user.role]);
+  }, [user]);
 
   const addToast = (message, type = 'info') => {
     const id = Date.now();
@@ -443,14 +448,18 @@ export function StoreProvider({ children }) {
       try {
         localStorage.setItem('neon_products', JSON.stringify(storageProducts));
       } catch (innerError) {
-        // If we hit the 5MB limit, fall back to "Lite" mode (no Base64)
-        const liteProducts = storageProducts.map(p => ({
-           ...p,
-           images: (p.images || []).filter(img => typeof img === 'string' && !img.startsWith('data:')),
-           image: typeof p.image === 'string' && !p.image.startsWith('data:') ? p.image : null,
-        }));
-        localStorage.setItem('neon_products', JSON.stringify(liteProducts));
-        console.warn('LocalStorage limit reached - syncing in Lite Mode (metadata only)');
+        // Only trigger "Lite" mode if we are actually online (to avoid wiping images while offline)
+        if (backendStatus === 'online') {
+          const liteProducts = storageProducts.map(p => ({
+             ...p,
+             images: (p.images || []).filter(img => typeof img === 'string' && !img.startsWith('data:')),
+             image: typeof p.image === 'string' && !p.image.startsWith('data:') ? p.image : null,
+          }));
+          localStorage.setItem('neon_products', JSON.stringify(liteProducts));
+          console.warn('LocalStorage limit reached - syncing in Lite Mode (metadata only)');
+        } else {
+          console.warn('LocalStorage full while offline - preserving current cache state.');
+        }
       }
     } catch (e) {
       console.warn('LocalStorage sync totally failed:', e);
@@ -522,7 +531,7 @@ export function StoreProvider({ children }) {
         } catch (error) {
           console.error('Background order sync failed:', error);
         }
-      }, 10000); // 10 seconds
+      }, 5000); // 5 seconds (Improved for real-time)
     }
     return () => clearInterval(interval);
   }, [user, addToast]);
@@ -679,6 +688,8 @@ export function StoreProvider({ children }) {
     try {
       const response = await authAPI.register(userData);
       const newUser = response.data;
+      // Force immediate persistence to prevent race conditions during role-change re-fetches
+      localStorage.setItem('neon_user', JSON.stringify(newUser));
       setUsers(prev => [...prev, newUser]);
       setUser(newUser);
       return { success: true, user: newUser };
@@ -758,6 +769,8 @@ export function StoreProvider({ children }) {
     try {
       const response = await authAPI.login({ email, password });
       const userData = response.data;
+      // Force immediate persistence so API interceptor has the token for immediate re-fetches
+      localStorage.setItem('neon_user', JSON.stringify(userData));
       setUser(userData);
       setCart([]); // Clear cart on login
       return { success: true, user: userData };
@@ -814,11 +827,27 @@ export function StoreProvider({ children }) {
 
   const deleteProduct = async (productId) => {
     try {
-      await productAPI.delete(productId);
+      if (!productId) {
+        addToast('Invalid product ID.', 'error');
+        return;
+      }
+      
+      try {
+        await productAPI.delete(productId);
+      } catch (apiError) {
+        // If the product is already gone from backend (404), we should still remove it locally
+        if (apiError.response && apiError.response.status === 404) {
+          console.warn('Product already deleted from server, removing local reference.');
+        } else {
+          throw apiError;
+        }
+      }
+
       setProducts(prev => prev.filter(p => (p._id || p.id) !== productId));
       addToast('Product removed', 'info');
     } catch (error) {
-      addToast('Failed to remove product', 'error');
+      console.error('Delete product failed:', error);
+      addToast('Failed to remove product. Check connection.', 'error');
     }
   };
 
@@ -981,7 +1010,7 @@ export function StoreProvider({ children }) {
       revenueGoal, setRevenueGoal,
       addReview,
       currency, setCurrency, formatPrice, EXCHANGE_RATES,
-      paymentInfo, setPaymentInfo,
+      paymentInfo, setPaymentInfo, backendStatus,
       toasts, addToast, removeToast, factoryReset, savePaymentSettings, reverifyEmailConfig
     }}>
       {children}
