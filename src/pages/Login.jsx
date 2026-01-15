@@ -23,7 +23,7 @@ export default function Login() {
   }, [searchParams]);
 
   // Handle login form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
@@ -33,17 +33,9 @@ export default function Login() {
     const email = formData.get('email');
     const password = formData.get('password');
 
-    // Processing delay to enhance user feedback and UI transition
-    setTimeout(() => {
-      // Check for demo admin credentials
-      if (email === 'admin@neonmarket.com' && password === 'asadullah@5858') {
-        login('admin', 'Admin');
-        navigate('/vendor');
-        return;
-      }
-
+    try {
       // Attempt to authenticate registered user from database
-      const result = authenticateUser(email, password);
+      const result = await authenticateUser(email, password);
       
       if (result.success) {
         // Redirect based on user role
@@ -53,10 +45,13 @@ export default function Login() {
           navigate('/');
         }
       } else {
-        setError('Invalid email or password');
+        setError(result.error || 'Invalid email or password');
         setLoading(false);
       }
-    }, 800);
+    } catch (err) {
+      setError('Connection failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (

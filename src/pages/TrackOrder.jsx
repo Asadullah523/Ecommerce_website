@@ -55,6 +55,7 @@ export default function TrackOrder() {
     setTimeout(() => {
       const order = orders.find(o => {
         const idMatch = 
+          (o.displayId && o.displayId.toString().includes(orderIdInput)) ||
           (o.orderId && o.orderId.includes(orderIdInput)) ||
           (o.id && o.id.toUpperCase().includes(orderIdInput)) || 
           (o._id && o._id.toUpperCase().includes(orderIdInput));

@@ -86,20 +86,23 @@ export default function Checkout() {
     };
 
     try {
-      // 1. Place order immediately (No artificial delays)
       const order = await placeOrder(orderData);
       setLastOrder(order);
       
-      // 2. Fire email confirmation in background (NON-BLOCKING)
+      // 2. Fire email confirmation (NON-BLOCKING but state-tracked)
+      setEmailStatus('sending');
       sendOrderConfirmation({ ...orderData, ...order }).then(result => {
-        if (!result.success) {
+        if (result.success) {
+          setEmailStatus('success');
+          setErrorMessage('');
+        } else {
           console.warn("Email background failure:", result.error);
-          setErrorMessage('Note: Confirmation email failed to send, but your order is safe.');
+          setEmailStatus('error');
+          setErrorMessage(result.error || 'Connection failure');
         }
       });
 
       // 3. Move to success screen instantly
-      setEmailStatus('success');
       setLoading(false);
       setStep(2);
 
@@ -157,17 +160,45 @@ export default function Checkout() {
           </div>
           
           <h2 className="mb-2 text-3xl font-black text-white italic tracking-tighter uppercase">Order Confirmed!</h2>
-          <p className="mb-8 text-sm text-gray-400 font-medium px-4">
-            Thank you for your purchase. We have sent a confirmation email to <span className="text-white">{lastOrder?.customer?.email || lastOrder?.email || 'your email'}</span>.
-          </p>
+          
+          <div className="mb-6 flex flex-col items-center">
+             <div className="flex items-center gap-2 mb-2 p-2 px-4 rounded-full bg-white/[0.03] border border-white/5">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Email Status:</span>
+                {emailStatus === 'sending' && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-2.5 w-2.5 rounded-full border-2 border-accent-cyan/20 border-t-accent-cyan animate-spin" />
+                    <span className="text-[10px] font-black text-accent-cyan uppercase tracking-widest">Transmitting...</span>
+                  </div>
+                )}
+                {emailStatus === 'success' && (
+                  <div className="flex items-center gap-2">
+                     <CheckCircle2 className="h-3 w-3 text-green-500" />
+                     <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Delivery Confirmed</span>
+                  </div>
+                )}
+                {emailStatus === 'error' && (
+                  <div className="flex items-center gap-2">
+                     <X className="h-3 w-3 text-red-500" />
+                     <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Delivery Failed</span>
+                  </div>
+                )}
+             </div>
+             
+             <p className="text-sm text-gray-400 font-medium px-4">
+               Thank you for your purchase. {emailStatus === 'success' ? 'We have sent a confirmation' : 'A summary will be sent'} to <span className="text-white">{lastOrder?.customer?.email || lastOrder?.email || 'your email'}</span>.
+             </p>
+          </div>
 
-          {errorMessage && (
+          {emailStatus === 'error' && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-left flex gap-3 items-start animate-fade-in">
               <X className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-bold text-red-400 mb-1">Email Delivery Failed</p>
-                <p className="text-xs text-red-400/80 leading-relaxed">
-                  {errorMessage}
+                <p className="text-xs text-red-400/80 leading-relaxed uppercase tracking-tighter font-black">
+                  Error: {errorMessage}
+                </p>
+                <p className="text-[9px] text-red-400/50 mt-1 uppercase font-bold">
+                  Don't worry, your order is secure in our database.
                 </p>
               </div>
             </div>

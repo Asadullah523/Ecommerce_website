@@ -296,26 +296,27 @@ export function StoreProvider({ children }) {
 
       try {
         const [productsRes, ordersRes, categoriesRes, couponsRes, settingsRes, usersRes] = await Promise.all([
-          productAPI.getAll().catch(() => ({ data: [] })),
-          orderAPI.getAll().catch(() => ({ data: [] })),
-          categoryAPI.getAll().catch(() => ({ data: [] })),
-          couponAPI.getAll().catch(() => ({ data: [] })),
-          settingsAPI.getAll().catch(() => ({ data: {} })),
-          authAPI.getAllUsers().catch(() => ({ data: [] }))
+          productAPI.getAll().catch(() => null),
+          orderAPI.getAll().catch(() => null),
+          categoryAPI.getAll().catch(() => null),
+          couponAPI.getAll().catch(() => null),
+          settingsAPI.getAll().catch(() => null),
+          authAPI.getAllUsers().catch(() => null)
         ]);
         
         const [cartRes, wishlistRes] = await Promise.all([
-          loggedIn ? cartAPI.get(userId).catch(() => ({ data: { items: [] } })) : Promise.resolve({ data: { items: [] } }),
-          loggedIn ? wishlistAPI.get(userId).catch(() => ({ data: { products: [] } })) : Promise.resolve({ data: { products: [] } })
+          loggedIn ? cartAPI.get(userId).catch(() => null) : Promise.resolve({ data: { items: [] } }),
+          loggedIn ? wishlistAPI.get(userId).catch(() => null) : Promise.resolve({ data: { products: [] } })
         ]);
 
-        // Always update states to ensure "zero" data is reflected
-        setProducts(sanitizeProducts(productsRes.data || []));
-        setOrders(sanitizeOrders(ordersRes.data || []));
-        setCategories(sanitizeCategories(categoriesRes.data || []));
-        setCoupons(sanitizeCoupons(couponsRes.data || []));
-        setUsers(usersRes.data || []);
-        if (settingsRes.data && settingsRes.data.revenueGoal) {
+        // Only update if we got a valid response (not null from catch)
+        if (productsRes) setProducts(sanitizeProducts(productsRes.data || []));
+        if (ordersRes) setOrders(sanitizeOrders(ordersRes.data || []));
+        if (categoriesRes) setCategories(sanitizeCategories(categoriesRes.data || []));
+        if (couponsRes) setCoupons(sanitizeCoupons(couponsRes.data || []));
+        if (usersRes) setUsers(usersRes.data || []);
+        
+        if (settingsRes?.data?.revenueGoal) {
           setRevenueGoal(settingsRes.data.revenueGoal);
         }
         if (settingsRes.data && settingsRes.data.paymentInfo) {
@@ -338,6 +339,9 @@ export function StoreProvider({ children }) {
         console.error('Error fetching data:', error);
         addToast('Failed to connect to backend. Using local data.', 'error');
       } finally {
+        // Guarantee splash screen stays for at least 1.5s to allow rendering buffer
+        const minimumWait = new Promise(resolve => setTimeout(resolve, 1500));
+        await minimumWait;
         setLoading(false);
       }
     };
@@ -416,20 +420,40 @@ export function StoreProvider({ children }) {
     }
   }, [users]);
 
-  // Products sync: Save metadata and external links only to localStorage.
-  // This allows instant loading without hitting the QuotaExceededError (5MB limit).
   useEffect(() => {
     try {
+      localStorage.setItem('neon_orders', JSON.stringify(orders));
+    } catch (e) {
+      console.error('Failed to save orders to localStorage:', e);
+    }
+  }, [orders]);
+
+  // Products sync: Save metadata and critical images to localStorage.
+  useEffect(() => {
+    try {
+      // Strategy: Try to save the first image of each product.
+      // High-res Base64 images are kept unless we hit QuotaExceededError.
       const storageProducts = (products || []).filter(Boolean).map(p => ({
         ...p,
-        // Strip out large Base64 strings (data:) to save space, keep http links
-        images: (p.images || []).filter(img => typeof img === 'string' && !img.startsWith('data:')),
-        image: typeof p.image === 'string' && !p.image.startsWith('data:') ? p.image : null,
+        // Keep the main image and the first entry of the images array
+        images: (p.images || []).slice(0, 1),
+        image: p.image || p.images?.[0] || null,
       }));
-      localStorage.setItem('neon_products', JSON.stringify(storageProducts));
+      
+      try {
+        localStorage.setItem('neon_products', JSON.stringify(storageProducts));
+      } catch (innerError) {
+        // If we hit the 5MB limit, fall back to "Lite" mode (no Base64)
+        const liteProducts = storageProducts.map(p => ({
+           ...p,
+           images: (p.images || []).filter(img => typeof img === 'string' && !img.startsWith('data:')),
+           image: typeof p.image === 'string' && !p.image.startsWith('data:') ? p.image : null,
+        }));
+        localStorage.setItem('neon_products', JSON.stringify(liteProducts));
+        console.warn('LocalStorage limit reached - syncing in Lite Mode (metadata only)');
+      }
     } catch (e) {
-      // If we still hit a limit, we just gracefully fail; backend is the source of truth
-      console.warn('LocalStorage sync partial failure (likely quota):', e);
+      console.warn('LocalStorage sync totally failed:', e);
     }
   }, [products]);
 

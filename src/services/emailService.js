@@ -56,22 +56,12 @@ const isDuplicateEmail = (orderId, status = 'confirmation') => {
 const generateFullEmailHTML = (order) => {
   const items = order.items || [];
   const customer = order.customer || { name: 'Valued Customer' };
-  const rawId = order.orderId || order.id || order._id || 'PENDING';
-  let orderId = 'PENDING';
-  if (rawId !== 'PENDING') {
-    if (order.orderId) {
-      orderId = order.orderId;
-    } else {
-      // Deterministic numeric hash fallback
-      const hexPart = rawId.toString().slice(-8);
-      orderId = (parseInt(hexPart, 16) % 90000000 + 10000000).toString();
-    }
-  }
+  const orderId = order.displayId || order.orderId || order.id || order._id || 'PENDING';
 
   const itemRows = items.map(item => `
     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
       <td style="padding: 15px 0; width: 64px;">
-        <img src="${item.image || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'}" alt="${item.name || 'Product'}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(0,242,255,0.25); display: block; box-shadow: 0 8px 20px rgba(0,0,0,0.3);">
+        <img src="${item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'}" alt="${item.name || 'Product'}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(0,242,255,0.25); display: block; box-shadow: 0 8px 20px rgba(0,0,0,0.3);" onerror="this.src='https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'">
       </td>
       <td style="padding: 15px 15px; text-align: left;">
         <div style="font-weight: 800; font-size: 15px; color: #ffffff; margin-bottom: 4px; line-height: 1.2; letter-spacing: -0.01em;">${item.name || 'Tech Gear'}</div>
@@ -148,22 +138,12 @@ const generateFullEmailHTML = (order) => {
 const generateStatusEmailHTML = (order, status) => {
   const items = order.items || [];
   const customer = order.customer || { name: 'Valued Customer' };
-  const rawId = order.orderId || order.id || order._id || 'PENDING';
-  let displayId = 'PENDING';
-  if (rawId !== 'PENDING') {
-    if (order.orderId) {
-      displayId = order.orderId;
-    } else {
-      const hexPart = rawId.toString().slice(-8);
-      displayId = (parseInt(hexPart, 16) % 90000000 + 10000000).toString();
-    }
-  }
-  const orderId = rawId; // Keep rawId for links
+  const orderId = order.displayId || order.orderId || order.id || order._id || 'PENDING';
 
   const itemRows = items.map(item => `
     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
       <td style="padding: 15px 0; width: 64px;">
-        <img src="${item.image || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'}" alt="${item.name || 'Product'}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); display: block;">
+        <img src="${item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'}" alt="${item.name || 'Product'}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); display: block;" onerror="this.src='https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&q=80'">
       </td>
       <td style="padding: 15px 15px; text-align: left;">
         <div style="font-weight: 800; font-size: 15px; color: #ffffff; margin-bottom: 4px; line-height: 1.2;">${item.name || 'Tech Gear'}</div>
@@ -242,22 +222,22 @@ const retry = async (fn, retries = 2, delay = 1000) => {
 export const sendOrderConfirmation = async (order) => {
   try {
     const customer = order.customer || { name: 'Customer', email: 'support@neonmarket.com' };
-    const orderId = order.orderId || order.id || order._id || Date.now().toString().slice(-8);
+    const trackingId = order.displayId || order.orderId || order.id || order._id || Date.now().toString().slice(-8);
 
-    if (isDuplicateEmail(orderId, 'confirmed')) return { success: true };
+    if (isDuplicateEmail(trackingId, 'confirmed')) return { success: true };
 
     const templateParams = {
       to_name: customer.name,
       to_email: customer.email,
-      order_id: orderId,
+      order_id: trackingId,
       total_amount: formatCurrency(order.total || 0, order.currency, order.exchangeRate),
       order_items: generateFullEmailHTML(order),
-      track_link: `${window.location.origin}/track?id=${orderId}`,
+      track_link: `${window.location.origin}/track?id=${trackingId}`,
       reply_to: 'support@neonmarket.com',
     };
 
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email request timed out')), 12000);
+      setTimeout(() => reject(new Error('Email request timed out (20s limit reached). This usually happens if EmailJS is slow.')), 20000);
     });
 
     const response = await Promise.race([retry(() => emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY)), timeoutPromise]);
@@ -275,22 +255,22 @@ export const sendOrderConfirmation = async (order) => {
 export const sendStatusNotification = async (order, status) => {
   try {
     const customer = order.customer || { name: 'Customer', email: 'support@neonmarket.com' };
-    const orderId = order.orderId || order.id || order._id || Date.now().toString().slice(-8);
+    const trackingId = order.displayId || order.orderId || order.id || order._id || Date.now().toString().slice(-8);
 
-    if (isDuplicateEmail(orderId, status)) return { success: true };
+    if (isDuplicateEmail(trackingId, status)) return { success: true };
 
     const templateParams = {
       to_name: customer.name,
       to_email: customer.email,
-      order_id: orderId,
+      order_id: trackingId,
       total_amount: formatCurrency(order.total || 0, order.currency, order.exchangeRate),
       order_items: generateStatusEmailHTML(order, status),
-      track_link: `${window.location.origin}/track?id=${orderId}`,
+      track_link: `${window.location.origin}/track?id=${trackingId}`,
       reply_to: 'support@neonmarket.com',
     };
 
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Status email timed out')), 12000);
+      setTimeout(() => reject(new Error('Status email timed out (20s limit reached)')), 20000);
     });
 
     const response = await Promise.race([retry(() => emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY)), timeoutPromise]);
