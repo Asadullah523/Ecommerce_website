@@ -41,15 +41,30 @@ router.post('/', async (req, res) => {
 // @access  Private/Admin
 router.get('/', async (req, res) => {
     try {
-        console.log('📦 Fetching all orders from database...');
-        const orders = await Order.find({}).sort({ createdAt: -1 });
+        console.log('📦 Starting order fetch...');
+        console.log('📦 MongoDB connection state:', req.app.locals.mongoose?.connection?.readyState);
+
+        // Try to count first to see if collection is accessible
+        const count = await Order.countDocuments();
+        console.log(`📊 Order collection has ${count} documents`);
+
+        console.log('📦 Executing find query...');
+        const orders = await Order.find({}).sort({ createdAt: -1 }).lean();
         console.log(`✅ Successfully fetched ${orders.length} orders`);
+
         res.json(orders);
     } catch (error) {
-        console.error('❌ Error fetching orders:', error);
+        console.error('❌ FATAL ERROR in orders GET route:');
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);
-        res.status(500).json({ message: error.message });
+        console.error('Error stack:', error.stack);
+        console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+
+        res.status(500).json({
+            message: 'Failed to fetch orders',
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
